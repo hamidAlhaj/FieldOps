@@ -8,7 +8,7 @@ describe('Health HTTP endpoints', () => {
   let app: INestApplication;
   const query = jest.fn();
   beforeAll(async () => {
-    const module = await Test.createTestingModule({ controllers: [HealthController], providers: [{ provide: PrismaService, useValue: { $queryRaw: query } }] }).compile();
+    const module = await Test.createTestingModule({ controllers: [HealthController], providers: [{ provide: PrismaService, useValue: { ping: query } }] }).compile();
     app = module.createNestApplication(); app.setGlobalPrefix('api/v1'); await app.init();
   });
   afterAll(() => app.close());

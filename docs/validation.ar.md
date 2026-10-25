@@ -1,13 +1,20 @@
-# نتائج التحقق — Stage 1
+# نتائج التحقق — Stage 2
 
-- Node.js 24.19.0 وnpm 11.9.0.
-- PostgreSQL 17 عبر Docker Compose: Healthy.
-- نجح إنشاء جدول Organization وإدخال سجل وقراءته داخل transaction ثم ROLLBACK؛ لم تُطبّق migration على قاعدة التطوير عبر Prisma بعد.
-- نجح TypeScript typecheck وbuild لكل من API وWeb.
-- نجحت 3 اختبارات Jest/Supertest مع Prisma mock و3 اختبارات Vitest لعقد HTTP.
-- Vite يقدم HTML بنجاح. لم يُجرَ browser E2E.
-- Prisma generate وvalidate محجوبان: proxy يرفض binaries.prisma.sh بـ403 عند تنزيل checksum. لم يتم تعطيل verification. نتيجة ذلك API لا يبدأ لأن Prisma Client غير مولّد. migrate deploy وSwagger وreal database readiness غير متحقق منها.
-- إضافة binaries.prisma.sh وinstall_script وstart_skill محفوظة في مسودة البيئة. يلزم تطبيق السماح من Environment Settings، إعادة generate وmigrate deploy، ثم بدء API واختبار readiness. الحفظ ليس publication.
-- npm audit بعد محاولة الإصلاح المتوافق: 12 تحذيراً (3 moderate، 7 high، 2 critical)، منها Prisma transitive dependencies وZod وMulter وVitest/Tinypool. بعضها يتطلب major upgrades حسب npm. لا يُنشر هذا الأساس كمنتج production قبل معالجة التبعيات وإعادة التحقق. لم يُستخدم audit fix --force.
+## البيئة الحالية
 
-هذه النتائج تخص البيئة الحالية ولا تثبت استعادة snapshot في task جديدة. Stage 2 غير مصرّح بها.
+- Node.js 24.19.0 وnpm 11.9.0، PostgreSQL 17 عبر Docker Compose: Healthy.
+- أُزيل العائق الشبكي السابق: Prisma engines نُزّلت مع verification؛ نجح prisma generate وprisma validate.
+- طُبقت migrations الثلاث من الصفر على fieldops وfieldops_test، وتأكد migrate status من عدم وجود pending migrations.
+- نجح تكرار seed دون إضافة demo duplicates أوإعادة ضبط الحالات المعدلة.
+- نجح typecheck وbuild لكل من API وWeb. لا تعديلات في frontend.
+- نجحت 3 اختبارات Jest/Supertest و3 اختبارات Vitest السابقة.
+- نجحت 16 integration tests على PostgreSQL الحقيقي، مع إعادة تشغيل suite على قاعدة الاختبار نفسها. تشمل membership spoofing/suspension وRLS وcomposite foreign keys وpool context وworkflow وreassignment/cancellation وoptimistic concurrency وdispatch concurrent attempts وقيود attachment/location وappend-only audit permissions.
+- نجح GET /api/v1/health بحالة ok، وGET /api/v1/health/ready أعاد database connected، وGET /api/docs-json أعاد OpenAPI.
+- نجح بدء Prisma Studio وتقديم HTML على loopback بعد تعيين XDG_CACHE_HOME إلى cache قابل للكتابة في /tmp. أُوقف بعد التحقق.
+- لم تُنفذ Authentication أوbusiness HTTP endpoints أوbrowser E2E. actorId في طبقة البيانات يجب أن يأتي من مصادقة موثوقة عند تنفيذها لاحقاً. مالك قاعدة البيانات وPrisma Studio لهما صلاحيات إدارية تتجاوز عزل التطبيق.
+
+## حدود متبقية
+
+تقرير audit في Stage 1 كشف 12 تحذيراً (3 moderate، 7 high، 2 critical)، منها Prisma transitive dependencies وZod وMulter وVitest/Tinypool. لم تُرقَّ major versions في هذه المرحلة؛ معالجة dependencies والتحقق منها شرط قبل production. لا يوجد ادعاء بأن هذا التنفيذ جاهز للنشر الإنتاجي.
+
+التصميم الحالي وتفاصيل seed وPrisma Studio واختبارات التكامل في [Database Architecture](database.ar.md). config draft الخاصة بالبيئة لا تعني publication أوالتحقق من snapshot جديدة. المرحلة التالية تتطلب موافقة صريحة.

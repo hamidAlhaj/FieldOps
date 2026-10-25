@@ -1,14 +1,343 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
-// Stage 1 includes only the organization boundary. Business models follow after approval.
+
+enum RoleName {
+  ADMIN
+  DISPATCHER
+  TECHNICIAN
+  CUSTOMER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkOrderStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  CLOSED
+  CANCELLED
+}
+
+enum RequestStatus {
+  SUBMITTED
+  ACCEPTED
+  RESOLVED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  COMPLETED
+  REASSIGNED
+  CANCELLED
+}
+
+enum NotificationType {
+  ASSIGNMENT
+  STATUS_CHANGE
+  SYSTEM
+}
+
 model Organization {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @db.VarChar(160)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String                     @id @default(uuid()) @db.Uuid
+  name          String                     @db.VarChar(160)
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  memberships   Membership[]
+  technicians   TechnicianProfile[]
+  customers     CustomerProfile[]
+  teams         Team[]
+  teamMembers   TeamMember[]
+  requests      MaintenanceRequest[]
+  workOrders    WorkOrder[]
+  assignments   Assignment[]
+  history       WorkOrderStatusHistory[]
+  locations     TechnicianLocationUpdate[]
+  attachments   Attachment[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model User {
+  id          String       @id @default(uuid()) @db.Uuid
+  email       String       @unique @db.VarChar(254)
+  displayName String       @db.VarChar(160)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+}
+
+model Role {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        RoleName     @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+}
+
+model Membership {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @db.Uuid
+  userId         String                   @db.Uuid
+  roleId         String                   @db.Uuid
+  status         MembershipStatus         @default(ACTIVE)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role           Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  technician     TechnicianProfile?
+  customer       CustomerProfile?
+  teamMembers    TeamMember[]
+  assignedBy     Assignment[]             @relation("AssignedBy")
+  statusChanges  WorkOrderStatusHistory[]
+  uploads        Attachment[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([userId, status])
+  @@index([roleId])
+}
+
+model TechnicianProfile {
+  id             String                     @id @default(uuid()) @db.Uuid
+  organizationId String                     @db.Uuid
+  membershipId   String                     @unique @db.Uuid
+  employeeCode   String                     @db.VarChar(40)
+  phone          String?                    @db.VarChar(32)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membership     Membership                 @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Restrict)
+  assignments    Assignment[]
+  locations      TechnicianLocationUpdate[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, employeeCode])
+  @@unique([organizationId, membershipId])
+}
+
+model CustomerProfile {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String               @db.Uuid
+  membershipId   String               @unique @db.Uuid
+  phone          String?              @db.VarChar(32)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membership     Membership           @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Restrict)
+  requests       MaintenanceRequest[]
+
+  @@unique([organizationId, membershipId])
+  @@unique([organizationId, id])
+}
+
+model Team {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  name           String       @db.VarChar(120)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  members        TeamMember[]
+  workOrders     WorkOrder[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+}
+
+model TeamMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  teamId         String       @db.Uuid
+  membershipId   String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  team           Team         @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Restrict)
+  membership     Membership   @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, teamId, membershipId])
+  @@index([organizationId, membershipId])
+}
+
+model MaintenanceRequest {
+  id                 String          @id @default(uuid()) @db.Uuid
+  organizationId     String          @db.Uuid
+  customerId         String          @db.Uuid
+  title              String          @db.VarChar(200)
+  description        String
+  address            String          @db.VarChar(500)
+  latitude           Decimal?        @db.Decimal(9, 6)
+  longitude          Decimal?        @db.Decimal(9, 6)
+  status             RequestStatus   @default(SUBMITTED)
+  cancellationReason String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer           CustomerProfile @relation(fields: [organizationId, customerId], references: [organizationId, id], onDelete: Restrict)
+  workOrders         WorkOrder[]
+  attachments        Attachment[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, customerId])
+}
+
+model WorkOrder {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  organizationId     String                   @db.Uuid
+  requestId          String                   @db.Uuid
+  teamId             String?                  @db.Uuid
+  title              String                   @db.VarChar(200)
+  description        String
+  priority           WorkOrderPriority        @default(MEDIUM)
+  status             WorkOrderStatus          @default(OPEN)
+  scheduledAt        DateTime?
+  completedAt        DateTime?
+  verifiedAt         DateTime?
+  closedAt           DateTime?
+  cancellationReason String?
+  version            Int                      @default(0)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  request            MaintenanceRequest       @relation(fields: [organizationId, requestId], references: [organizationId, id], onDelete: Restrict)
+  team               Team?                    @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Restrict)
+  assignments        Assignment[]
+  statusHistory      WorkOrderStatusHistory[]
+  attachments        Attachment[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, priority, scheduledAt])
+  @@index([organizationId, requestId])
+  @@index([organizationId, teamId])
+}
+
+model Assignment {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  workOrderId    String            @db.Uuid
+  technicianId   String            @db.Uuid
+  assignedById   String            @db.Uuid
+  status         AssignmentStatus  @default(ACTIVE)
+  endedAt        DateTime?
+  reason         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder      WorkOrder         @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  technician     TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  assignedBy     Membership        @relation("AssignedBy", fields: [organizationId, assignedById], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, workOrderId, createdAt])
+  @@index([organizationId, technicianId, status])
+  @@index([organizationId, assignedById])
+}
+
+model WorkOrderStatusHistory {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  workOrderId    String           @db.Uuid
+  changedById    String           @db.Uuid
+  fromStatus     WorkOrderStatus?
+  toStatus       WorkOrderStatus
+  reason         String?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder      WorkOrder        @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  changedBy      Membership       @relation(fields: [organizationId, changedById], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, workOrderId, createdAt])
+  @@index([organizationId, changedById])
+}
+
+model TechnicianLocationUpdate {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  technicianId   String            @db.Uuid
+  latitude       Decimal           @db.Decimal(9, 6)
+  longitude      Decimal           @db.Decimal(9, 6)
+  accuracyMeters Float?
+  recordedAt     DateTime
+  createdAt      DateTime          @default(now())
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  technician     TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, technicianId, recordedAt(sort: Desc)])
+}
+
+model Attachment {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @db.Uuid
+  requestId      String?             @db.Uuid
+  workOrderId    String?             @db.Uuid
+  uploadedById   String              @db.Uuid
+  storageKey     String              @unique @db.VarChar(500)
+  fileName       String              @db.VarChar(255)
+  mimeType       String              @db.VarChar(120)
+  sizeBytes      Int
+  createdAt      DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  request        MaintenanceRequest? @relation(fields: [organizationId, requestId], references: [organizationId, id], onDelete: Restrict)
+  workOrder      WorkOrder?          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  uploadedBy     Membership          @relation(fields: [organizationId, uploadedById], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, requestId])
+  @@index([organizationId, workOrderId])
+  @@index([organizationId, uploadedById])
+}
+
+model Notification {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  recipientId    String           @db.Uuid
+  type           NotificationType
+  title          String           @db.VarChar(200)
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recipient      Membership       @relation(fields: [organizationId, recipientId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, recipientId, readAt, createdAt])
+}
+
+model AuditLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  actorId        String       @db.Uuid
+  action         String       @db.VarChar(120)
+  entityType     String       @db.VarChar(80)
+  entityId       String       @db.Uuid
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor          Membership   @relation(fields: [organizationId, actorId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, entityType, entityId, createdAt])
+  @@index([organizationId, actorId, createdAt])
 }

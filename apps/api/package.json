@@ -9,7 +9,10 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.cjs",
+    "db:studio": "prisma studio",
+    "test:integration": "node scripts/test-database.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

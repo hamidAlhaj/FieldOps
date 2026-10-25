@@ -1,6 +1,6 @@
 # FieldOps
 
-أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 1 فقط**. راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 2: Database Architecture**. راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
 
 ## التشغيل المحلي
 
@@ -28,7 +28,7 @@ curl --fail http://127.0.0.1:3000/api/v1/health
 curl --fail http://127.0.0.1:3000/api/v1/health/ready
 ```
 
-اختبارات Jest/Supertest تختبر HTTP health مع database mock، واختبارات Vitest تختبر API contract والأخطاء. readiness request إلى الخادم الجاري يفحص PostgreSQL الحقيقي. لا توجد اختبارات لميزات غير مطبّقة.
+اختبارات Jest/Supertest تختبر HTTP health مع database mock، واختبارات Vitest تختبر API contract والأخطاء. readiness request إلى الخادم الجاري يفحص PostgreSQL الحقيقي. اختبارات PostgreSQL الحقيقية منفصلة: راجع docs/database.ar.md.
 
 لإعادة تطبيق migrations الموجودة دون إنشاء migration جديدة:
 
@@ -40,4 +40,4 @@ npm exec -w @fieldops/api -- prisma migrate deploy
 
 ## ما لم يُنفّذ بعد
 
-Authentication، الأدوار، tenant authorization، Requests، Work Orders، Tracking، Uploads، Notifications وAnalytics تصميم موثّق فقط. النظام الحالي ليس تطبيقاً جاهزاً للإنتاج. لن تبدأ Stage 2 دون موافقة صريحة.
+تم تنفيذ schema وmigrations وseed وعزل المؤسسات وWorkOrderService داخلية مع اختبارات PostgreSQL. Authentication وbusiness HTTP endpoints وRealtime وعمليات الملفات والواجهة الخاصة بالميزات لم تنفّذ. النظام ليس جاهزاً للإنتاج، والمرحلة التالية تتطلب موافقة صريحة.

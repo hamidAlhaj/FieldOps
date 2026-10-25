@@ -1,8 +1,8 @@
 # FieldOps — Architecture وRoadmap
 
-## نطاق Stage 1
+## نطاق Stage 1 والتحديث الحالي
 
-تم فحص المستودع: لا توجد ملفات أو commits سابقة. هذه المرحلة تجهّز foundations فقط: npm workspaces، React/Vite/Tailwind، NestJS، Prisma/PostgreSQL، Swagger، health checks، وtest runners. لا توجد مصادقة أو endpoints للأعمال بعد. لا انتقال إلى Stage 2 دون موافقة صريحة.
+تم فحص المستودع: لا توجد ملفات أو commits سابقة. هذه المرحلة تجهّز foundations فقط: npm workspaces، React/Vite/Tailwind، NestJS، Prisma/PostgreSQL، Swagger، health checks، وtest runners. لا توجد مصادقة أو endpoints للأعمال بعد. وافق المستخدم لاحقاً على Stage 2 لقاعدة البيانات فقط؛ تفاصيل التنفيذ الحالية في [Database Architecture](database.ar.md)، وهذه الموافقة لا تشمل Authentication أوالواجهة.
 
 ## المعمارية المقترحة
 
@@ -59,7 +59,7 @@ compose.yaml
 | Analytics | قراءة مؤشرات مشتقة من Work Orders وAssignments، دون تغيير حالاتها |
 | Audit Logs | actor وorganization وaction وresource وtimestamp، دون passwords/tokens |
 
-النموذج المستقبلي: User يمتلك Memberships متعددة؛ Organization تمتلك Teams وMemberships وRequests وWorkOrders. Request له Customer وقد يرتبط بـWorkOrder واحد أو أكثر. WorkOrder له Assignments متعاقبة، StatusHistory وصور. Technician Profile يرتبط بـMembership وليس User وحده. RefreshSession ترتبط بـUser؛ LocationUpdate ترتبط بفني وOrganization. كل مورد tenant يحمل organizationId، مع indexes وقيود composite لمنع الربط بين مؤسستين. Stage 1 يهاجر Organization فقط، وبقية العلاقات تُنفذ في مراحلها.
+النموذج المستقبلي: User يمتلك Memberships متعددة؛ Organization تمتلك Teams وMemberships وRequests وWorkOrders. Request له Customer وقد يرتبط بـWorkOrder واحد أو أكثر. WorkOrder له Assignments متعاقبة، StatusHistory وصور. Technician Profile يرتبط بـMembership وليس User وحده. RefreshSession ترتبط بـUser؛ LocationUpdate ترتبط بفني وOrganization. كل مورد tenant يحمل organizationId، مع indexes وقيود composite لمنع الربط بين مؤسستين. Stage 1 هاجر Organization فقط؛ Stage 2 نفذت الآن بقية علاقات الأعمال والعزل كما في وثيقة قاعدة البيانات. RefreshSession تبقى لمرحلة Authentication.
 
 ## قرارات مهمة
 
@@ -77,8 +77,8 @@ compose.yaml
 
 ## Roadmap وحدود القبول
 
-1. **Stage 1 — Foundations (الحالية):** bootable frontend/backend، PostgreSQL، migration أولية، Swagger، build/typecheck وsmoke tests.
-2. **Stage 2 — Identity & tenancy:** Users/Memberships/Teams، JWT/refresh rotation، RBAC وresource policies؛ قبولها يتطلب اختبارات العزل والإلغاء وrefresh reuse.
+1. **Stage 1 — Foundations:** bootable frontend/backend، PostgreSQL، migration أولية، Swagger، build/typecheck وsmoke tests.
+2. **Stage 2 — Database Architecture (الحالية، حسب طلب المستخدم):** جميع models والعلاقات وmigrations وseed وعزل Organizations واختبارات التكامل. JWT/refresh rotation وHTTP authorization مؤجلة لموافقة لاحقة.
 3. **Stage 3 — Service lifecycle:** Requests وWorkOrders وAssignments، transitions، concurrency، قوائم ونماذج؛ اختبارات workflow كاملة.
 4. **Stage 4 — Field operations:** تحديث التقدم والصور، React Leaflet، location ingestion وSocket.IO، outbox وnotifications؛ اختبارات reconnect والصلاحيات.
 5. **Stage 5 — Visibility:** analytics وaudit querying، filters وpagination وسياسة retention.
