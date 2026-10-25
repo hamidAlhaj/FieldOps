@@ -1,6 +1,6 @@
 # FieldOps
 
-أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 3: Authentication & Authorization**. راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 4 — Frontend foundations (الدفعة الأولى)**. راجع [Component architecture والواجهة](docs/frontend.ar.md). راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
 
 ## التشغيل المحلي
 
@@ -41,4 +41,4 @@ npm exec -w @fieldops/api -- prisma migrate deploy
 
 ## نطاق التنفيذ الحالي
 
-تم تنفيذ قاعدة البيانات والمصادقة والصلاحيات وendpoints محمية للموارد الأساسية. لم تتغير الواجهة. Realtime وعمليات الملفات وميزات Analytics مؤجلة. راجع docs/authentication.ar.md للحدود التشغيلية؛ المرحلة التالية تتطلب موافقة صريحة.
+تم تنفيذ قاعدة البيانات والمصادقة والصلاحيات، ثم design system وapplication shell وauth UI وOverview وقائمة الأعمال. الواجهة في development تبدأ بـDemo واضح، ويمكن اختيار VITE_DATA_SOURCE=api. Realtime وعمليات الملفات وميزات Analytics وبقية الصفحات مؤجلة. راجع docs/authentication.ar.md للحدود التشغيلية؛ المرحلة التالية تتطلب موافقة صريحة.

@@ -1,4 +1,24 @@
-# نتائج التحقق — Stage 3
+# نتائج التحقق — Stage 4، الدفعة الأولى
+
+- نجح typecheck وproduction build لكل من API وWeb. قُسمت حزم UI/forms/query، وأصبحت fonts محلية من Latin subsets.
+- نجحت 16 اختبارات عادية: 8 NestJS سابقة و8 Vitest للواجهة وHTTP client/filters.
+- نجحت 6 اختبارات متصفح Demo على Chromium: search/filter/pagination/details، role switching، keyboard entry، mobile navigation، light/dark themes، وtablet overflow.
+- نجح اختبار متصفح API مستقل ضد NestJS/PostgreSQL الحقيقيين: registration، session restore بعد reload، error/retry، logout ورفض protected route، وإبطال الجلسة المرئية في تبويب آخر.
+- axe لم يجد مخالفات ضمن WCAG 2 A/AA و2.1 AA في صفحات Demo التي فُحصت، وفُحص نموذج Registration الفعلي أيضاً. هذا فحص آلي محدود وليس شهادة شاملة للوصولية.
+- فُحصت المقاسات 390 و768 و1024 و1440، وراجعت لقطات Desktop Light/Dark وMobile بصرياً.
+- تنزيل متصفح Playwright منعته الشبكة؛ استُخدم Chromium الموجود في /usr/bin/chromium بنجاح، دون تغيير إعدادات التحقق أوالشبكة.
+- API E2E تعمل على قاعدة _test منفصلة ولا تعيد reset لقاعدة التطوير. الـ503 في سيناريو retry محقونة عمداً؛ التسجيل والجلسات وقراءة البيانات فعليّة.
+- لم تتغير backend source أوmigrations. اختبارات PostgreSQL التفصيلية الـ35 السابقة لم تُعد بالكامل في هذه الدفعة؛ الدليل الجديد هو اختبار المتصفح الحقيقي والاختبارات العادية المذكورة.
+
+## نطاق هذه الدفعة
+
+Design system وshell وauth UI وrole-aware Overview وقائمة read-only مع تفاصيل موجزة. Assignment UI وLive Tracking وAnalytics وProfile forms وبقية الصفحات الكاملة مؤجلة، كما يطلب المستخدم. mock fixtures معزولة وواضحة؛ production defaults to API، دون fallback وهمي. Pagination محلية لما يصل إلى 100 سجل من API الحالية.
+
+تحذيرات dependencies وحدود production في Stage 3 أدناه لم تُعالج بهذه الدفعة، ولا ندّعي audit جديداً أوجاهزية نشر إنتاجي. [Frontend architecture](frontend.ar.md) توثق التشغيل والحدود.
+
+---
+
+## السجل السابق — Stage 3
 
 - Node.js 24.19.0، PostgreSQL 17، NestJS 11 وPrisma 6.19.
 - migration الرابعة أضيفت وطبّقت على development وfieldops_test؛ توليد Prisma Client نجح.
