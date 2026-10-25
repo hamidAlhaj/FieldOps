@@ -100,7 +100,7 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
         ).count,
       ).toBe(0);
       expect(
-        (await tx.user.findMany()).every(
+        (await tx.user.findMany({ select: { email: true } })).every(
           (row) => !row.email.includes("aleppo"),
         ),
       ).toBe(true);
@@ -304,6 +304,11 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
         },
       }),
     ).rejects.toThrow();
+  });
+  it('tenant runtime cannot read password hashes or refresh credentials', async () => {
+    await expect(scoped.forOrganization(a, tx => tx.user.findMany({ select: { passwordHash: true } }))).rejects.toThrow();
+    await expect(scoped.forOrganization(a, tx => tx.authSession.findMany())).rejects.toThrow();
+    await expect(scoped.forOrganization(a, tx => tx.refreshToken.findMany())).rejects.toThrow();
   });
   it("runtime role cannot mutate audit history or grant itself membership", async () => {
     await expect(

@@ -1,5 +1,7 @@
 # FieldOps — Architecture وRoadmap
 
+**التحديث الحالي:** اكتملت Stage 3 للمصادقة والصلاحيات وفق طلب المستخدم. راجع [Authentication](authentication.ar.md). خارطة المراحل الأصلية أدناه إرشادية؛ نطاق كل مرحلة تحدده موافقة المستخدم الأحدث. لا انتقال تلقائي.
+
 ## نطاق Stage 1 والتحديث الحالي
 
 تم فحص المستودع: لا توجد ملفات أو commits سابقة. هذه المرحلة تجهّز foundations فقط: npm workspaces، React/Vite/Tailwind، NestJS، Prisma/PostgreSQL، Swagger، health checks، وtest runners. لا توجد مصادقة أو endpoints للأعمال بعد. وافق المستخدم لاحقاً على Stage 2 لقاعدة البيانات فقط؛ تفاصيل التنفيذ الحالية في [Database Architecture](database.ar.md)، وهذه الموافقة لا تشمل Authentication أوالواجهة.

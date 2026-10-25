@@ -1,20 +1,17 @@
-# نتائج التحقق — Stage 2
+# نتائج التحقق — Stage 3
 
-## البيئة الحالية
+- Node.js 24.19.0، PostgreSQL 17، NestJS 11 وPrisma 6.19.
+- migration الرابعة أضيفت وطبّقت على development وfieldops_test؛ توليد Prisma Client نجح.
+- نجحت 35 integration tests على PostgreSQL الحقيقي: 18 لـAuth HTTP/Passport و17 لقاعدة البيانات والعزل. لا mocks للهوية أوالجلسات في integration suite.
+- نجحت 8 اختبارات NestJS unit/HTTP tests و3 اختبارات Vitest السابقة، بمجموع 46 اختباراً مع integration.
+- نجح typecheck وbuild لكل التطبيقين، دون تعديل frontend.
+- نجح تشغيل configure-local-auth مرتين دون استبدال signing secret أوعرض قيمته؛ ملف .env غير متعقب ويضبط بصلاحية 0600.
+- في العملية الجارية: health/ready تعيد database connected، وauth/me دون Bearer تعيد 401، وOpenAPI متاحة مع auth schemas.
+- tests تغطي Argon2id، refresh hashing/cookie properties، DTO validation وrole injection، JWT signature/expiry/audience، Origin/CSRF، الأدوار وملكية الموارد وعزل المؤسسات، العضوية الموقوفة/آخر Admin، sessions expired/disabled users، rotation/replay/concurrent refresh/logout، Swagger وthrottling.
+- جميع بيانات المستخدمين وكلمات مرور fixtures في integration tests تخص قاعدة _test فقط. seed التطوير لا ينشئ credentials.
 
-- Node.js 24.19.0 وnpm 11.9.0، PostgreSQL 17 عبر Docker Compose: Healthy.
-- أُزيل العائق الشبكي السابق: Prisma engines نُزّلت مع verification؛ نجح prisma generate وprisma validate.
-- طُبقت migrations الثلاث من الصفر على fieldops وfieldops_test، وتأكد migrate status من عدم وجود pending migrations.
-- نجح تكرار seed دون إضافة demo duplicates أوإعادة ضبط الحالات المعدلة.
-- نجح typecheck وbuild لكل من API وWeb. لا تعديلات في frontend.
-- نجحت 3 اختبارات Jest/Supertest و3 اختبارات Vitest السابقة.
-- نجحت 16 integration tests على PostgreSQL الحقيقي، مع إعادة تشغيل suite على قاعدة الاختبار نفسها. تشمل membership spoofing/suspension وRLS وcomposite foreign keys وpool context وworkflow وreassignment/cancellation وoptimistic concurrency وdispatch concurrent attempts وقيود attachment/location وappend-only audit permissions.
-- نجح GET /api/v1/health بحالة ok، وGET /api/v1/health/ready أعاد database connected، وGET /api/docs-json أعاد OpenAPI.
-- نجح بدء Prisma Studio وتقديم HTML على loopback بعد تعيين XDG_CACHE_HOME إلى cache قابل للكتابة في /tmp. أُوقف بعد التحقق.
-- لم تُنفذ Authentication أوbusiness HTTP endpoints أوbrowser E2E. actorId في طبقة البيانات يجب أن يأتي من مصادقة موثوقة عند تنفيذها لاحقاً. مالك قاعدة البيانات وPrisma Studio لهما صلاحيات إدارية تتجاوز عزل التطبيق.
+## فحص التبعيات والحدود
 
-## حدود متبقية
+`npm audit --omit=dev` الحالي: 12 تنبيهاً (11 high و1 moderate)، تشمل تبعيات Prisma وZod وMulter وjs-yaml وتأثيرها على NestJS dependents. effect مثبتة داخل Prisma config بالإصدار 3.18.4؛ بقية الإصلاحات ليست متاحة ضمن الإصدارات المثبتة حسب التقرير. لم تُفرض major upgrades أوtransitive overrides غير متحققة. يجب معالجة هذا قبل production؛ أعداد Stage 1 القديمة لا تمثل فحص runtime الحالي، وdev dependencies غير مشمولة في هذا الأمر.
 
-تقرير audit في Stage 1 كشف 12 تحذيراً (3 moderate، 7 high، 2 critical)، منها Prisma transitive dependencies وZod وMulter وVitest/Tinypool. لم تُرقَّ major versions في هذه المرحلة؛ معالجة dependencies والتحقق منها شرط قبل production. لا يوجد ادعاء بأن هذا التنفيذ جاهز للنشر الإنتاجي.
-
-التصميم الحالي وتفاصيل seed وPrisma Studio واختبارات التكامل في [Database Architecture](database.ar.md). config draft الخاصة بالبيئة لا تعني publication أوالتحقق من snapshot جديدة. المرحلة التالية تتطلب موافقة صريحة.
+هذه المرحلة لا تضيف frontend auth flows، email verification، password reset، MFA، logout-all، cleanup jobs أوshared throttler storage. المخزن الحالي للـrate limit داخل instance واحدة. التوثيق في [Authentication](authentication.ar.md) يشرح deployment assumptions وحدود صلاحيات identity store. لا ادعاء بجاهزية إنتاجية أوpublication لبيئة جديدة. المرحلة التالية تتطلب موافقة صريحة.

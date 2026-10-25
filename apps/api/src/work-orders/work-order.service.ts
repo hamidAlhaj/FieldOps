@@ -142,7 +142,7 @@ export class WorkOrderService {
             id: technicianId,
           },
         },
-        include: { membership: { include: { role: true, user: true } } },
+        include: { membership: { include: { role: true, user: { select: { isActive: true } } } } },
       });
       if (
         !technician ||

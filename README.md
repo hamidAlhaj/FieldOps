@@ -1,6 +1,6 @@
 # FieldOps
 
-أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 2: Database Architecture**. راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 3: Authentication & Authorization**. راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
 
 ## التشغيل المحلي
 
@@ -10,6 +10,7 @@
 cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 npm ci
+npm run auth:configure-local -w @fieldops/api
 docker compose up -d --wait
 npm run db:generate
 npm exec -w @fieldops/api -- prisma migrate deploy
@@ -38,6 +39,6 @@ npm exec -w @fieldops/api -- prisma migrate deploy
 
 إيقاف الخوادم بـ Ctrl+C، وقاعدة البيانات بـ `docker compose down`. البيانات تبقى في volume؛ `docker compose down -v` يحذف بيانات التطوير نهائياً.
 
-## ما لم يُنفّذ بعد
+## نطاق التنفيذ الحالي
 
-تم تنفيذ schema وmigrations وseed وعزل المؤسسات وWorkOrderService داخلية مع اختبارات PostgreSQL. Authentication وbusiness HTTP endpoints وRealtime وعمليات الملفات والواجهة الخاصة بالميزات لم تنفّذ. النظام ليس جاهزاً للإنتاج، والمرحلة التالية تتطلب موافقة صريحة.
+تم تنفيذ قاعدة البيانات والمصادقة والصلاحيات وendpoints محمية للموارد الأساسية. لم تتغير الواجهة. Realtime وعمليات الملفات وميزات Analytics مؤجلة. راجع docs/authentication.ar.md للحدود التشغيلية؛ المرحلة التالية تتطلب موافقة صريحة.

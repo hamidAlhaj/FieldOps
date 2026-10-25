@@ -1,6 +1,6 @@
 # Stage 2 — Database Architecture
 
-هذه المرحلة تنفذ قاعدة البيانات وطبقة الوصول فقط. لا توجد business HTTP endpoints أو Authentication جديدة، ولم تتغير الواجهة. WorkOrderService داخلية لاختبار transactions وقواعد الانتقال؛ لا يُمرّر actorId من العميل إليها مستقبلاً، بل من JWT موثّق.
+هذه وثيقة Stage 2 التاريخية؛ [Stage 3](authentication.ar.md) أضافت المصادقة وendpoints المحمية. كانت هذه المرحلة تنفذ قاعدة البيانات وطبقة الوصول فقط. لا توجد business HTTP endpoints أو Authentication جديدة، ولم تتغير الواجهة. WorkOrderService داخلية لاختبار transactions وقواعد الانتقال؛ لا يُمرّر actorId من العميل إليها مستقبلاً، بل من JWT موثّق.
 
 ## العلاقات
 
