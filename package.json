@@ -1,0 +1,22 @@
+{
+  "name": "fieldops",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web \"npm run dev -w @fieldops/api\" \"npm run dev -w @fieldops/web\"",
+    "build": "npm run build -w @fieldops/api && npm run build -w @fieldops/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate -w @fieldops/api",
+    "db:migrate": "npm run db:migrate -w @fieldops/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
