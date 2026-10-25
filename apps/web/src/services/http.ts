@@ -50,7 +50,9 @@ export async function http<T>(
     ...options,
     credentials: "include",
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !(options.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -85,3 +87,16 @@ export async function http<T>(
   );
 }
 export const accessSchema = tokenSchema;
+
+export const getAccessToken = () => token;
+export async function photoBlob(path: string, retry = true): Promise<Blob> {
+  const response = await fetch(`/api/v1${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (response.status === 401 && retry) {
+    await refreshSession();
+    return photoBlob(path, false);
+  }
+  if (!response.ok) throw new ApiError("Photo unavailable", response.status);
+  return response.blob();
+}

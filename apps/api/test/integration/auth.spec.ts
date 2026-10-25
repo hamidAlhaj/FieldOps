@@ -243,7 +243,19 @@ describe("Authentication and resource authorization HTTP/PostgreSQL", () => {
       .send(body)
       .expect(201);
     expect(r.body.customerId).toBe(id("damascus:customer:profile"));
-    await get("work-orders", "customer").expect(403);
+    const ownOrders = await get("work-orders", "customer").expect(200);
+    const foreignOrder = await db.workOrder.create({
+      data: {
+        organizationId: org,
+        requestId: foreign.id,
+        title: "Private order",
+        description: "Other customer",
+      },
+    });
+    expect(
+      ownOrders.body.some((o: { id: string }) => o.id === foreignOrder.id),
+    ).toBe(false);
+    await get(`work-orders/${foreignOrder.id}`, "customer").expect(404);
   });
   it("technicians access only active assigned jobs and cannot dispatch or verify", async () => {
     await get(`work-orders/${id("damascus:reassigned:order")}`, "tech1").expect(

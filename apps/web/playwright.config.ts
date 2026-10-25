@@ -4,10 +4,14 @@ export default defineConfig({
   testDir: "./e2e",
   testMatch: api ? "api.spec.ts" : "workspace.spec.ts",
   fullyParallel: false,
+  expect: { timeout: 10000 },
   workers: 1,
   use: {
     baseURL: api ? "http://127.0.0.1:5175" : "http://127.0.0.1:5174",
     headless: true,
+    actionTimeout: 15000,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
     },

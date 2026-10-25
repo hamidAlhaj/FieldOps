@@ -1,3 +1,4 @@
+import { PhotoService } from "../work-orders/photo.service";
 import { Module } from "@nestjs/common";
 import { PrismaModule } from "../prisma/prisma.module";
 import { WorkOrderModule } from "../work-orders/work-order.module";
@@ -6,6 +7,6 @@ import { ResourceService } from "./resource.service";
 @Module({
   imports: [PrismaModule, WorkOrderModule],
   controllers: [ResourceController],
-  providers: [ResourceService],
+  providers: [ResourceService, PhotoService],
 })
 export class ResourceModule {}

@@ -62,3 +62,16 @@ it("does not refresh failed credential requests", async () => {
   ).rejects.toThrow("Invalid credentials");
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+it("lets the browser set multipart boundaries while preserving bearer authentication", async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response('{"id":"photo"}'));
+  vi.stubGlobal("fetch", fetch);
+  const { http, setAccessToken } = await import("./http");
+  setAccessToken("memory-token");
+  const body = new FormData();
+  body.set("file", new Blob(["sample"]), "photo.png");
+  await http("/photos", z.object({ id: z.string() }), { method: "POST", body });
+  const options = fetch.mock.calls[0][1];
+  expect(options.body).toBe(body);
+  expect(options.headers.Authorization).toBe("Bearer memory-token");
+  expect(options.headers).not.toHaveProperty("Content-Type");
+});

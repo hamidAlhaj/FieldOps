@@ -7,8 +7,11 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/api":
-        loadEnv(mode, ".", "").FIELDOPS_API_PROXY || "http://127.0.0.1:3000",
+      "/api": {
+        target:
+          loadEnv(mode, ".", "").FIELDOPS_API_PROXY || "http://127.0.0.1:3000",
+        ws: true,
+      },
     },
   },
   build: {

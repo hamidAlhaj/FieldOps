@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   BadRequestException,
   ConflictException,
@@ -170,6 +171,29 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         data: { revokedAt: new Date() },
       });
     });
+  }
+  async verifyAccessToken(token: string) {
+    try {
+      const claims = z
+        .object({
+          sub: z.string().uuid(),
+          sid: z.string().uuid(),
+          exp: z.number(),
+        })
+        .parse(
+          await this.jwt.verifyAsync(token, {
+            algorithms: ["HS256"],
+            issuer: "fieldops-api",
+            audience: "fieldops-web",
+          }),
+        );
+      return {
+        principal: await this.validateSession(claims.sub, claims.sid),
+        expiresAt: claims.exp * 1000,
+      };
+    } catch {
+      throw new UnauthorizedException();
+    }
   }
   async validateSession(userId: string, sessionId: string): Promise<Principal> {
     const session = await this.db.authSession.findFirst({

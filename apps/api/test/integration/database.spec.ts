@@ -1,3 +1,5 @@
+import sharp from "sharp";
+import { PhotoService } from "../../src/work-orders/photo.service";
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
@@ -9,6 +11,7 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
   const owner = new PrismaClient();
   const scoped = new PrismaService();
   const work = new WorkOrderService(scoped);
+  const photos = new PhotoService(scoped, work);
   const a = {
     organizationId: id("damascus"),
     actorId: id("damascus:dispatcher:user"),
@@ -35,6 +38,7 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
   }
   async function order() {
     const r = await request();
+    await work.review(a, r.id, 0, "Customer report confirmed");
     return work.create(a, r.id, r.title, r.description);
   }
   beforeAll(async () => {
@@ -164,13 +168,29 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
   it("runs request -> assigned -> in progress -> completed -> verified -> closed atomically", async () => {
     const o = await order();
     await work.assign(a, o.id, id("damascus:tech1:profile"), 0);
-    await work.transition(technician, o.id, "IN_PROGRESS", 1);
-    await work.transition(technician, o.id, "COMPLETED", 2);
+    await work.accept(technician, o.id, 1);
+    const buffer = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: "#336699" },
+    })
+      .png()
+      .toBuffer();
+    const image = { buffer, size: buffer.length } as Express.Multer.File;
+    await photos.upload(technician, o.id, 2, "BEFORE", image);
+    await work.transition(technician, o.id, "IN_PROGRESS", 3);
+    await work.progress(technician, o.id, 4, 70, "Replaced compressor bearing");
+    await photos.upload(technician, o.id, 5, "AFTER", image);
+    await work.transition(
+      technician,
+      o.id,
+      "COMPLETED",
+      6,
+      "Replaced bearing and tested startup",
+    );
     await expect(
-      work.transition(technician, o.id, "VERIFIED", 3),
+      work.transition(technician, o.id, "VERIFIED", 7),
     ).rejects.toThrow();
-    await work.transition(a, o.id, "VERIFIED", 3);
-    const closed = await work.transition(a, o.id, "CLOSED", 4);
+    await work.transition(a, o.id, "VERIFIED", 7);
+    const closed = await work.transition(a, o.id, "CLOSED", 8);
     expect(closed.status).toBe("CLOSED");
     expect(closed.closedAt).not.toBeNull();
     expect(
@@ -184,13 +204,13 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
       await owner.workOrderStatusHistory.count({
         where: { workOrderId: o.id },
       }),
-    ).toBe(6);
+    ).toBe(8);
     expect(
       await owner.assignment.findFirst({ where: { workOrderId: o.id } }),
     ).toMatchObject({ status: "COMPLETED" });
-    await expect(work.transition(a, o.id, "IN_PROGRESS", 5)).rejects.toThrow(
-      "Invalid status transition",
-    );
+    await expect(
+      work.transition(technician, o.id, "IN_PROGRESS", 9),
+    ).rejects.toThrow("Forbidden");
   });
   it("rejects stale versions and rolls back notifications, assignment, and history", async () => {
     const o = await order();
@@ -209,15 +229,16 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
   it("reassigns with history, resets to ASSIGNED, and removes the old technician access", async () => {
     const o = await order();
     await work.assign(a, o.id, id("damascus:tech1:profile"), 0);
-    await work.transition(technician, o.id, "IN_PROGRESS", 1);
+    await work.accept(technician, o.id, 1);
+    await work.transition(technician, o.id, "IN_PROGRESS", 2);
     await expect(
-      work.assign(a, o.id, id("damascus:tech2:profile"), 2),
+      work.assign(a, o.id, id("damascus:tech2:profile"), 3),
     ).rejects.toThrow("Reassignment reason required");
     await work.assign(
       a,
       o.id,
       id("damascus:tech2:profile"),
-      2,
+      3,
       "Electrical specialist needed",
     );
     const assignments = await owner.assignment.findMany({
@@ -277,7 +298,7 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
       await owner.assignment.findFirst({ where: { workOrderId: o.id } }),
     ).toMatchObject({ status: "CANCELLED" });
     await expect(
-      work.assign(a, o.id, id("damascus:tech2:profile"), 2),
+      work.assign(a, o.id, id("damascus:tech2:profile"), 3),
     ).rejects.toThrow();
   });
   it("rejects invalid attachment parents and impossible coordinates", async () => {
@@ -305,10 +326,42 @@ describe("PostgreSQL tenant isolation and lifecycle", () => {
       }),
     ).rejects.toThrow();
   });
-  it('tenant runtime cannot read password hashes or refresh credentials', async () => {
-    await expect(scoped.forOrganization(a, tx => tx.user.findMany({ select: { passwordHash: true } }))).rejects.toThrow();
-    await expect(scoped.forOrganization(a, tx => tx.authSession.findMany())).rejects.toThrow();
-    await expect(scoped.forOrganization(a, tx => tx.refreshToken.findMany())).rejects.toThrow();
+  it("tenant runtime cannot read password hashes or refresh credentials", async () => {
+    await expect(
+      scoped.forOrganization(a, (tx) =>
+        tx.user.findMany({ select: { passwordHash: true } }),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      scoped.forOrganization(a, (tx) => tx.authSession.findMany()),
+    ).rejects.toThrow();
+    await expect(
+      scoped.forOrganization(a, (tx) => tx.refreshToken.findMany()),
+    ).rejects.toThrow();
+  });
+  it("isolates photo bytes, progress and outbox and makes them append-only for runtime", async () => {
+    await scoped.forOrganization(a, async (tx) => {
+      for (const rows of [
+        await tx.photoContent.findMany(),
+        await tx.progressUpdate.findMany(),
+        await tx.outboxEvent.findMany(),
+      ]) {
+        expect(
+          rows.every((row) => row.organizationId === a.organizationId),
+        ).toBe(true);
+      }
+    });
+    await expect(
+      scoped.forOrganization(a, (tx) => tx.photoContent.deleteMany()),
+    ).rejects.toThrow();
+    await expect(
+      scoped.forOrganization(a, (tx) => tx.progressUpdate.deleteMany()),
+    ).rejects.toThrow();
+    await expect(
+      scoped.forOrganization(a, (tx) =>
+        tx.outboxEvent.updateMany({ data: { publishedAt: new Date() } }),
+      ),
+    ).rejects.toThrow();
   });
   it("runtime role cannot mutate audit history or grant itself membership", async () => {
     await expect(

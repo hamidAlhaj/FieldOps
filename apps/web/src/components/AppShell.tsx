@@ -1,3 +1,5 @@
+import { useRealtime } from "../features/workflow/useRealtime";
+import { Notifications } from "../features/workflow/Notifications";
 import { demoNotifications } from "../services/mocks/data";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -58,6 +60,13 @@ function Sidebar({ close }: { close?: () => void }) {
           {membership?.role.name === "CUSTOMER" ? "My requests" : "Work orders"}
           <ArrowUpRight size={14} className="nav-arrow" />
         </NavLink>
+        {!isDemo &&
+          ["ADMIN", "DISPATCHER"].includes(membership?.role.name ?? "") && (
+            <NavLink to="/requests" onClick={close}>
+              <BriefcaseBusiness size={19} />
+              Request inbox
+            </NavLink>
+          )}
       </nav>
       <p className="nav-label future-label">COMING NEXT</p>
       <div className="future-nav" aria-label="Planned modules">
@@ -90,13 +99,14 @@ function Sidebar({ close }: { close?: () => void }) {
         </div>
         <div className="system-status">
           <span />
-          Workspace online <small>v0.4</small>
+          Workspace online <small>v0.5</small>
         </div>
       </div>
     </>
   );
 }
 export function AppShell() {
+  const connected = useRealtime();
   const [mobile, setMobile] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [help, setHelp] = useState(false);
@@ -164,7 +174,11 @@ export function AppShell() {
           <div className="topbar-actions">
             <span className="workspace-context">
               <span />
-              {isDemo ? "Demo workspace" : "Connected workspace"}
+              {isDemo
+                ? "Demo workspace"
+                : connected
+                  ? "Live updates on"
+                  : "Syncing every 30s"}
             </span>
             <button
               className="icon-button"
@@ -280,7 +294,7 @@ export function AppShell() {
         description={
           isDemo
             ? "A preview of your team’s recent activity."
-            : "Your notifications will appear here when delivery is connected."
+            : "Your latest assignments and workspace activity."
         }
       >
         {isDemo ? (
@@ -297,9 +311,7 @@ export function AppShell() {
             ))}
           </div>
         ) : (
-          <p className="muted">
-            Notification delivery is planned for a later release.
-          </p>
+          <Notifications />
         )}
       </Modal>
       <Modal

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, RoleName, WorkOrderStatus } from "@prisma/client";
+import { event, notify } from "../realtime/events";
 import { OrganizationContext, PrismaService } from "../prisma/prisma.service";
 
 const next: Record<WorkOrderStatus, WorkOrderStatus[]> = {
@@ -55,6 +56,17 @@ export class WorkOrderService {
         reason,
       },
     });
+    const current = await tx.workOrder.findUniqueOrThrow({
+      where: { id: workOrderId },
+    });
+    await event(
+      tx,
+      organizationId,
+      "WorkOrder",
+      workOrderId,
+      action,
+      current.version,
+    );
     await tx.auditLog.create({
       data: {
         organizationId,
@@ -87,8 +99,8 @@ export class WorkOrderService {
         },
       });
       if (!request) throw new NotFoundException("Request not found");
-      if (["CANCELLED", "RESOLVED"].includes(request.status))
-        throw new ConflictException("Request is terminal");
+      if (request.status !== "ACCEPTED")
+        throw new ConflictException("Review and accept the request first");
       const order = await tx.workOrder.create({
         data: {
           organizationId: context.organizationId,
@@ -99,8 +111,15 @@ export class WorkOrderService {
       });
       await tx.maintenanceRequest.update({
         where: { id: requestId },
-        data: { status: "ACCEPTED" },
+        data: { version: { increment: 1 } },
       });
+      await event(
+        tx,
+        context.organizationId,
+        "MaintenanceRequest",
+        requestId,
+        "request.updated",
+      );
       await this.record(
         tx,
         context.organizationId,
@@ -142,7 +161,11 @@ export class WorkOrderService {
             id: technicianId,
           },
         },
-        include: { membership: { include: { role: true, user: { select: { isActive: true } } } } },
+        include: {
+          membership: {
+            include: { role: true, user: { select: { isActive: true } } },
+          },
+        },
       });
       if (
         !technician ||
@@ -160,7 +183,7 @@ export class WorkOrderService {
         throw new ConflictException("Technician already assigned");
       const updated = await tx.workOrder.updateMany({
         where: { id: orderId, version: expectedVersion },
-        data: { status: "ASSIGNED", version: { increment: 1 } },
+        data: { status: "ASSIGNED", progress: 0, version: { increment: 1 } },
       });
       if (updated.count !== 1)
         throw new ConflictException("Stale work order version");
@@ -187,15 +210,25 @@ export class WorkOrderService {
         active ? "WORK_ORDER_REASSIGNED" : "WORK_ORDER_ASSIGNED",
         reason,
       );
-      await tx.notification.create({
-        data: {
-          organizationId: context.organizationId,
-          recipientId: technician.membershipId,
-          type: "ASSIGNMENT",
-          title: "New assignment",
-          body: order.title,
-        },
-      });
+      await notify(
+        tx,
+        context.organizationId,
+        technician.membershipId,
+        "New assignment",
+        order.title,
+      );
+      if (active) {
+        const previous = await tx.technicianProfile.findUniqueOrThrow({
+          where: { id: active.technicianId },
+        });
+        await notify(
+          tx,
+          context.organizationId,
+          previous.membershipId,
+          "Assignment changed",
+          "Refresh your work list.",
+        );
+      }
       return assignment;
     });
   }
@@ -220,18 +253,33 @@ export class WorkOrderService {
       const staff = (["ADMIN", "DISPATCHER"] as RoleName[]).includes(
         actor.role.name,
       );
-      if (!staff) {
-        const assigned =
-          actor.role.name === "TECHNICIAN" &&
-          ["IN_PROGRESS", "COMPLETED"].includes(status) &&
-          (await tx.assignment.findFirst({
-            where: {
-              workOrderId: orderId,
-              status: "ACTIVE",
-              technician: { membershipId: actor.id },
-            },
-          }));
-        if (!assigned) throw new ForbiddenException();
+      const active = await tx.assignment.findFirst({
+        where: {
+          workOrderId: orderId,
+          status: "ACTIVE",
+          technician: { membershipId: actor.id },
+        },
+      });
+      if (["IN_PROGRESS", "COMPLETED"].includes(status)) {
+        if (actor.role.name !== "TECHNICIAN" || !active)
+          throw new ForbiddenException();
+        if (!active.acceptedAt)
+          throw new ConflictException("Accept this assignment first");
+      } else if (!staff) throw new ForbiddenException();
+      if (status === "COMPLETED") {
+        if (!reason?.trim())
+          throw new BadRequestException("Completion notes required");
+        const photos = await tx.attachment.findMany({
+          where: { assignmentId: active!.id, content: { isNot: null } },
+          select: { kind: true },
+        });
+        if (
+          !photos.some((p) => p.kind === "BEFORE") ||
+          !photos.some((p) => p.kind === "AFTER")
+        )
+          throw new ConflictException(
+            "Before and after photos required for this assignment",
+          );
       }
       if (!next[order.status].includes(status))
         throw new ConflictException("Invalid status transition");
@@ -243,7 +291,9 @@ export class WorkOrderService {
         data: {
           status,
           version: { increment: 1 },
-          ...(status === "COMPLETED" ? { completedAt: now } : {}),
+          ...(status === "COMPLETED"
+            ? { completedAt: now, progress: 100, completionNotes: reason }
+            : {}),
           ...(status === "VERIFIED" ? { verifiedAt: now } : {}),
           ...(status === "CLOSED" ? { closedAt: now } : {}),
           ...(status === "CANCELLED" ? { cancellationReason: reason } : {}),
@@ -270,20 +320,181 @@ export class WorkOrderService {
         "WORK_ORDER_STATUS_CHANGED",
         reason,
       );
-      if (status === "CLOSED") {
+      if (status === "CLOSED" || status === "CANCELLED") {
         const remaining = await tx.workOrder.count({
           where: {
             requestId: order.requestId,
             status: { notIn: ["CLOSED", "CANCELLED"] },
           },
         });
-        if (remaining === 0)
+        const closed = await tx.workOrder.count({
+          where: { requestId: order.requestId, status: "CLOSED" },
+        });
+        if (remaining === 0 && closed > 0)
           await tx.maintenanceRequest.update({
             where: { id: order.requestId },
-            data: { status: "RESOLVED" },
+            data: { status: "RESOLVED", version: { increment: 1 } },
           });
       }
+      await event(
+        tx,
+        context.organizationId,
+        "MaintenanceRequest",
+        order.requestId,
+        "request.updated",
+      );
       return tx.workOrder.findUniqueOrThrow({ where: { id: orderId } });
+    });
+  }
+  async accept(
+    context: OrganizationContext,
+    id: string,
+    expectedVersion: number,
+  ) {
+    return this.prisma.forOrganization(context, async (tx) => {
+      const { actor, order, assignment } = await this.assigned(tx, context, id);
+      if (order.status !== "ASSIGNED" || assignment.acceptedAt)
+        throw new ConflictException("Assignment cannot be accepted");
+      await this.bump(tx, id, expectedVersion);
+      await tx.assignment.update({
+        where: { id: assignment.id },
+        data: { acceptedAt: new Date() },
+      });
+      await this.record(
+        tx,
+        context.organizationId,
+        id,
+        actor.id,
+        order.status,
+        order.status,
+        "ASSIGNMENT_ACCEPTED",
+      );
+      return tx.workOrder.findUniqueOrThrow({ where: { id } });
+    });
+  }
+  async assigned(
+    tx: Prisma.TransactionClient,
+    context: OrganizationContext,
+    id: string,
+  ) {
+    const actor = await this.actor(tx, context);
+    if (actor.role.name !== "TECHNICIAN") throw new ForbiddenException();
+    const order = await tx.workOrder.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException();
+    const assignment = await tx.assignment.findFirst({
+      where: {
+        workOrderId: id,
+        status: "ACTIVE",
+        technician: { membershipId: actor.id },
+      },
+    });
+    if (!assignment) throw new ForbiddenException();
+    return { actor, order, assignment };
+  }
+  async bump(
+    tx: Prisma.TransactionClient,
+    id: string,
+    expectedVersion: number,
+    progress?: number,
+  ) {
+    const result = await tx.workOrder.updateMany({
+      where: { id, version: expectedVersion },
+      data: {
+        version: { increment: 1 },
+        ...(progress === undefined ? {} : { progress }),
+      },
+    });
+    if (!result.count)
+      throw new ConflictException("Stale work order version; reload and retry");
+  }
+  async progress(
+    context: OrganizationContext,
+    id: string,
+    expectedVersion: number,
+    percent: number,
+    note: string,
+  ) {
+    if (
+      !note.trim() ||
+      !Number.isInteger(percent) ||
+      percent < 0 ||
+      percent > 99
+    )
+      throw new BadRequestException(
+        "Progress requires a note and percent from 0 to 99",
+      );
+    return this.prisma.forOrganization(context, async (tx) => {
+      const { actor, order, assignment } = await this.assigned(tx, context, id);
+      if (order.status !== "IN_PROGRESS" || !assignment.acceptedAt)
+        throw new ConflictException("Start the assignment first");
+      if (percent < order.progress)
+        throw new ConflictException("Progress cannot decrease");
+      await this.bump(tx, id, expectedVersion, percent);
+      const update = await tx.progressUpdate.create({
+        data: {
+          organizationId: context.organizationId,
+          workOrderId: id,
+          assignmentId: assignment.id,
+          authorId: actor.id,
+          percent,
+          note,
+        },
+      });
+      await this.record(
+        tx,
+        context.organizationId,
+        id,
+        actor.id,
+        order.status,
+        order.status,
+        "PROGRESS_UPDATED",
+        note,
+      );
+      return update;
+    });
+  }
+  async review(
+    context: OrganizationContext,
+    id: string,
+    expectedVersion: number,
+    note: string,
+  ) {
+    if (!note.trim()) throw new BadRequestException("Review notes required");
+    return this.prisma.forOrganization(context, async (tx) => {
+      const actor = await this.actor(tx, context);
+      if (!(["ADMIN", "DISPATCHER"] as RoleName[]).includes(actor.role.name))
+        throw new ForbiddenException();
+      const result = await tx.maintenanceRequest.updateMany({
+        where: { id, status: "SUBMITTED", version: expectedVersion },
+        data: {
+          status: "ACCEPTED",
+          version: { increment: 1 },
+          reviewedAt: new Date(),
+          reviewedById: actor.id,
+          reviewNotes: note,
+        },
+      });
+      if (!result.count)
+        throw new ConflictException("Request unavailable or already reviewed");
+      await tx.auditLog.create({
+        data: {
+          organizationId: context.organizationId,
+          actorId: actor.id,
+          entityType: "MaintenanceRequest",
+          entityId: id,
+          action: "REQUEST_REVIEWED",
+          metadata: { note },
+        },
+      });
+      await event(
+        tx,
+        context.organizationId,
+        "MaintenanceRequest",
+        id,
+        "request.reviewed",
+        expectedVersion + 1,
+      );
+      return tx.maintenanceRequest.findUniqueOrThrow({ where: { id } });
     });
   }
   async cancelRequest(
@@ -362,9 +573,20 @@ export class WorkOrderService {
           metadata: { reason },
         },
       });
+      await event(
+        tx,
+        context.organizationId,
+        "MaintenanceRequest",
+        requestId,
+        "request.cancelled",
+      );
       return tx.maintenanceRequest.update({
         where: { id: requestId },
-        data: { status: "CANCELLED", cancellationReason: reason },
+        data: {
+          status: "CANCELLED",
+          cancellationReason: reason,
+          version: { increment: 1 },
+        },
       });
     });
   }

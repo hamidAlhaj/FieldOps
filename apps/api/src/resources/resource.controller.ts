@@ -1,3 +1,10 @@
+import { UseInterceptors, UploadedFile, Res } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiConsumes, ApiBody } from "@nestjs/swagger";
+import { Response } from "express";
+import { PhotoService } from "../work-orders/photo.service";
+import { ReviewDto, ProgressDto, PhotoDto } from "../work-orders/workflow.dto";
+import { VersionDto } from "../auth/auth.dto";
 import {
   Body,
   Controller,
@@ -32,6 +39,7 @@ import { ResourceService } from "./resource.service";
 export class ResourceController {
   constructor(
     private readonly resources: ResourceService,
+    private readonly photos: PhotoService,
     private readonly auth: AuthService,
     private readonly orders: WorkOrderService,
   ) {}
@@ -103,15 +111,14 @@ export class ResourceController {
   ) {
     return this.orders.cancelRequest(this.context(r), id, dto.reason);
   }
-  @Get("work-orders") @Roles("ADMIN", "DISPATCHER", "TECHNICIAN") workOrders(
-    @Req() r: AuthRequest,
-  ) {
+  @Get("work-orders")
+  @Roles("ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER")
+  workOrders(@Req() r: AuthRequest) {
     return this.resources.orders(this.context(r));
   }
-  @Get("work-orders/:id") @Roles("ADMIN", "DISPATCHER", "TECHNICIAN") order(
-    @Req() r: AuthRequest,
-    @Param("id", ParseUUIDPipe) id: string,
-  ) {
+  @Get("work-orders/:id")
+  @Roles("ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER")
+  order(@Req() r: AuthRequest, @Param("id", ParseUUIDPipe) id: string) {
     return this.resources.orders(this.context(r), id);
   }
   @Post("work-orders") @Roles("ADMIN", "DISPATCHER") createOrder(
@@ -152,5 +159,98 @@ export class ResourceController {
       dto.expectedVersion,
       dto.reason,
     );
+  }
+  @Get("technicians") @Roles("ADMIN", "DISPATCHER") technicians(
+    @Req() r: AuthRequest,
+  ) {
+    return this.resources.technicians(this.context(r));
+  }
+  @Get("notifications") notifications(@Req() r: AuthRequest) {
+    return this.resources.notifications(this.context(r));
+  }
+  @Patch("notifications/:id/read") readNotification(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.resources.readNotification(this.context(r), id);
+  }
+  @Post("requests/:id/review") @Roles("ADMIN", "DISPATCHER") review(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: ReviewDto,
+  ) {
+    return this.orders.review(
+      this.context(r),
+      id,
+      dto.expectedVersion,
+      dto.note,
+    );
+  }
+  @Post("work-orders/:id/accept") @Roles("TECHNICIAN") accept(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: VersionDto,
+  ) {
+    return this.orders.accept(this.context(r), id, dto.expectedVersion);
+  }
+  @Post("work-orders/:id/progress") @Roles("TECHNICIAN") progress(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: ProgressDto,
+  ) {
+    return this.orders.progress(
+      this.context(r),
+      id,
+      dto.expectedVersion,
+      dto.percent,
+      dto.note,
+    );
+  }
+  @Post("work-orders/:id/photos")
+  @Roles("TECHNICIAN")
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["file", "kind", "expectedVersion"],
+      properties: {
+        file: { type: "string", format: "binary" },
+        kind: { type: "string", enum: ["BEFORE", "AFTER"] },
+        expectedVersion: { type: "integer", minimum: 0 },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 2 },
+    }),
+  )
+  upload(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: PhotoDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.photos.upload(
+      this.context(r),
+      id,
+      dto.expectedVersion,
+      dto.kind,
+      file,
+    );
+  }
+  @Get("photos/:id/content") async photo(
+    @Req() r: AuthRequest,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Res() response: Response,
+  ) {
+    const bytes = await this.photos.content(this.context(r), id);
+    response
+      .set({
+        "Content-Type": "image/webp",
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      })
+      .send(bytes);
   }
 }

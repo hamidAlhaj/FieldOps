@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsInt,
   Min,
+  Max,
   IsUUID,
   IsOptional,
 } from "class-validator";
@@ -74,7 +75,11 @@ export class OrderDto {
   description!: string;
 }
 export class VersionDto {
-  @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) expectedVersion!: number;
+  @ApiProperty({ minimum: 0 })
+  @IsInt()
+  @Min(0)
+  @Max(2147483646)
+  expectedVersion!: number;
 }
 export class AssignmentDto extends VersionDto {
   @ApiProperty() @IsUUID() technicianId!: string;

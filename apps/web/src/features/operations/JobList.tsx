@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { isDemo } from "../../services";
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -28,6 +30,11 @@ export function JobList({
   compact?: boolean;
   customer?: boolean;
 }) {
+  const navigate = useNavigate();
+  const openJob = (job: Job) =>
+    isDemo
+      ? setSelected(job)
+      : navigate(`/${customer ? "requests" : "work-orders"}/${job.id}`);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(1);
@@ -127,7 +134,7 @@ export function JobList({
                       <span className="job-reference">{job.reference}</span>
                       <button
                         className="job-title"
-                        onClick={() => setSelected(job)}
+                        onClick={() => openJob(job)}
                       >
                         {job.title}
                       </button>
@@ -174,7 +181,7 @@ export function JobList({
                       <button
                         className="row-action"
                         aria-label={`View ${job.reference}`}
-                        onClick={() => setSelected(job)}
+                        onClick={() => openJob(job)}
                       >
                         <ArrowUpRight size={18} />
                       </button>

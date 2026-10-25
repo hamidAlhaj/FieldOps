@@ -148,6 +148,11 @@ async function seedDatabase(db) {
             priority,
             status,
             scheduledAt: when,
+            progress: status === "CLOSED" ? 100 : 0,
+            completionNotes:
+              status === "CLOSED"
+                ? "Demo: equipment inspected and safety checks completed."
+                : null,
             completedAt: status === "CLOSED" ? at(3) : null,
             verifiedAt: status === "CLOSED" ? at(4) : null,
             closedAt: status === "CLOSED" ? at(5) : null,
@@ -217,6 +222,7 @@ async function seedDatabase(db) {
               technicianId: id(`${key}:tech1:profile`),
               assignedById: id(`${key}:dispatcher`),
               status: assignmentStatus,
+              acceptedAt: status === "CANCELLED" ? null : at(1.5),
               createdAt: at(1),
               updatedAt: at(3),
               endedAt: status === "CANCELLED" ? at(2) : at(3),
@@ -235,6 +241,7 @@ async function seedDatabase(db) {
               technicianId: id(`${key}:tech2:profile`),
               assignedById: id(`${key}:dispatcher`),
               reason: "Electrical specialist required",
+              acceptedAt: at(3.5),
               createdAt: at(3),
               updatedAt: at(3),
             },

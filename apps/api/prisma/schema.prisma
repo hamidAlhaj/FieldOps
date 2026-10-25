@@ -50,6 +50,11 @@ enum AssignmentStatus {
   CANCELLED
 }
 
+enum PhotoKind {
+  BEFORE
+  AFTER
+}
+
 enum NotificationType {
   ASSIGNMENT
   STATUS_CHANGE
@@ -57,23 +62,26 @@ enum NotificationType {
 }
 
 model Organization {
-  id            String                     @id @default(uuid()) @db.Uuid
-  name          String                     @db.VarChar(160)
-  createdAt     DateTime                   @default(now())
-  updatedAt     DateTime                   @updatedAt
-  memberships   Membership[]
-  technicians   TechnicianProfile[]
-  customers     CustomerProfile[]
-  teams         Team[]
-  teamMembers   TeamMember[]
-  requests      MaintenanceRequest[]
-  workOrders    WorkOrder[]
-  assignments   Assignment[]
-  history       WorkOrderStatusHistory[]
-  locations     TechnicianLocationUpdate[]
-  attachments   Attachment[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  id              String                     @id @default(uuid()) @db.Uuid
+  name            String                     @db.VarChar(160)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  memberships     Membership[]
+  technicians     TechnicianProfile[]
+  customers       CustomerProfile[]
+  teams           Team[]
+  teamMembers     TeamMember[]
+  requests        MaintenanceRequest[]
+  workOrders      WorkOrder[]
+  assignments     Assignment[]
+  history         WorkOrderStatusHistory[]
+  locations       TechnicianLocationUpdate[]
+  attachments     Attachment[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  progressUpdates ProgressUpdate[]
+  photoContents   PhotoContent[]
+  outboxEvents    OutboxEvent[]
 }
 
 model User {
@@ -97,24 +105,26 @@ model Role {
 }
 
 model Membership {
-  id             String                   @id @default(uuid()) @db.Uuid
-  organizationId String                   @db.Uuid
-  userId         String                   @db.Uuid
-  roleId         String                   @db.Uuid
-  status         MembershipStatus         @default(ACTIVE)
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  user           User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
-  role           Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  technician     TechnicianProfile?
-  customer       CustomerProfile?
-  teamMembers    TeamMember[]
-  assignedBy     Assignment[]             @relation("AssignedBy")
-  statusChanges  WorkOrderStatusHistory[]
-  uploads        Attachment[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
+  id               String                   @id @default(uuid()) @db.Uuid
+  organizationId   String                   @db.Uuid
+  userId           String                   @db.Uuid
+  roleId           String                   @db.Uuid
+  status           MembershipStatus         @default(ACTIVE)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role             Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  technician       TechnicianProfile?
+  customer         CustomerProfile?
+  teamMembers      TeamMember[]
+  assignedBy       Assignment[]             @relation("AssignedBy")
+  statusChanges    WorkOrderStatusHistory[]
+  uploads          Attachment[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  reviewedRequests MaintenanceRequest[]     @relation("RequestReviewer")
+  progressUpdates  ProgressUpdate[]
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
@@ -185,6 +195,11 @@ model TeamMember {
 }
 
 model MaintenanceRequest {
+  version            Int             @default(0)
+  reviewedAt         DateTime?
+  reviewNotes        String?
+  reviewedById       String?         @db.Uuid
+  reviewedBy         Membership?     @relation("RequestReviewer", fields: [organizationId, reviewedById], references: [organizationId, id], onDelete: Restrict)
   id                 String          @id @default(uuid()) @db.Uuid
   organizationId     String          @db.Uuid
   customerId         String          @db.Uuid
@@ -205,9 +220,13 @@ model MaintenanceRequest {
   @@unique([organizationId, id])
   @@index([organizationId, status, createdAt])
   @@index([organizationId, customerId])
+  @@index([organizationId, reviewedById])
 }
 
 model WorkOrder {
+  progress           Int                      @default(0)
+  completionNotes    String?
+  progressUpdates    ProgressUpdate[]
   id                 String                   @id @default(uuid()) @db.Uuid
   organizationId     String                   @db.Uuid
   requestId          String                   @db.Uuid
@@ -238,22 +257,26 @@ model WorkOrder {
 }
 
 model Assignment {
-  id             String            @id @default(uuid()) @db.Uuid
-  organizationId String            @db.Uuid
-  workOrderId    String            @db.Uuid
-  technicianId   String            @db.Uuid
-  assignedById   String            @db.Uuid
-  status         AssignmentStatus  @default(ACTIVE)
-  endedAt        DateTime?
-  reason         String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  workOrder      WorkOrder         @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
-  technician     TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
-  assignedBy     Membership        @relation("AssignedBy", fields: [organizationId, assignedById], references: [organizationId, id], onDelete: Restrict)
+  acceptedAt      DateTime?
+  attachments     Attachment[]
+  progressUpdates ProgressUpdate[]
+  id              String            @id @default(uuid()) @db.Uuid
+  organizationId  String            @db.Uuid
+  workOrderId     String            @db.Uuid
+  technicianId    String            @db.Uuid
+  assignedById    String            @db.Uuid
+  status          AssignmentStatus  @default(ACTIVE)
+  endedAt         DateTime?
+  reason          String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder       WorkOrder         @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  technician      TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  assignedBy      Membership        @relation("AssignedBy", fields: [organizationId, assignedById], references: [organizationId, id], onDelete: Restrict)
 
   @@unique([organizationId, id])
+  @@unique([organizationId, id, workOrderId], map: "Assignment_order_identity")
   @@index([organizationId, workOrderId, createdAt])
   @@index([organizationId, technicianId, status])
   @@index([organizationId, assignedById])
@@ -292,6 +315,10 @@ model TechnicianLocationUpdate {
 }
 
 model Attachment {
+  kind           PhotoKind?
+  assignmentId   String?             @db.Uuid
+  assignment     Assignment?         @relation(fields: [organizationId, assignmentId, workOrderId], references: [organizationId, id, workOrderId], onDelete: NoAction, onUpdate: NoAction, map: "Photo_assignment_order")
+  content        PhotoContent?
   id             String              @id @default(uuid()) @db.Uuid
   organizationId String              @db.Uuid
   requestId      String?             @db.Uuid
@@ -307,9 +334,11 @@ model Attachment {
   workOrder      WorkOrder?          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
   uploadedBy     Membership          @relation(fields: [organizationId, uploadedById], references: [organizationId, id], onDelete: Restrict)
 
+  @@unique([organizationId, id])
   @@index([organizationId, requestId])
   @@index([organizationId, workOrderId])
   @@index([organizationId, uploadedById])
+  @@index([organizationId, assignmentId, kind])
 }
 
 model Notification {
@@ -366,4 +395,50 @@ model RefreshToken {
   session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+}
+
+model ProgressUpdate {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  workOrderId    String       @db.Uuid
+  assignmentId   String       @db.Uuid
+  authorId       String       @db.Uuid
+  percent        Int
+  note           String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder      WorkOrder    @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  assignment     Assignment   @relation(fields: [organizationId, assignmentId, workOrderId], references: [organizationId, id, workOrderId], onDelete: NoAction, onUpdate: NoAction, map: "Progress_assignment_order")
+  author         Membership   @relation(fields: [organizationId, authorId], references: [organizationId, id], onDelete: Restrict)
+
+  @@index([organizationId, workOrderId, createdAt])
+  @@index([organizationId, assignmentId])
+  @@index([organizationId, authorId])
+}
+
+model PhotoContent {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  attachmentId   String       @unique @db.Uuid
+  bytes          Bytes
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  attachment     Attachment   @relation(fields: [organizationId, attachmentId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, attachmentId])
+}
+
+model OutboxEvent {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  aggregateType  String       @db.VarChar(40)
+  aggregateId    String       @db.Uuid
+  eventType      String       @db.VarChar(80)
+  version        Int?
+  createdAt      DateTime     @default(now())
+  publishedAt    DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([publishedAt, createdAt])
+  @@index([organizationId, aggregateType, aggregateId])
 }

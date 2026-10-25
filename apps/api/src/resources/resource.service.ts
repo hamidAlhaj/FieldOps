@@ -1,3 +1,5 @@
+import { event } from "../realtime/events";
+import { orderVisibility, orderDetail } from "./visibility";
 import {
   ForbiddenException,
   Injectable,
@@ -78,8 +80,16 @@ export class ResourceService {
             ? { customer: { membershipId: member.id } }
             : {}),
         };
-        if (!id) return tx.maintenanceRequest.findMany({ where, take: 100 });
-        const result = await tx.maintenanceRequest.findFirst({ where });
+        if (!id)
+          return tx.maintenanceRequest.findMany({
+            where,
+            take: 100,
+            orderBy: { createdAt: "desc" },
+          });
+        const result = await tx.maintenanceRequest.findFirst({
+          where,
+          include: { workOrders: { orderBy: { createdAt: "desc" } } },
+        });
         if (!result) throw new NotFoundException();
         return result;
       },
@@ -91,37 +101,113 @@ export class ResourceService {
         where: { membershipId: member.id },
       });
       if (!profile) throw new ForbiddenException();
-      return tx.maintenanceRequest.create({
+      const request = await tx.maintenanceRequest.create({
         data: {
           ...dto,
           organizationId: context.organizationId,
           customerId: profile.id,
         },
       });
+      await tx.auditLog.create({
+        data: {
+          organizationId: context.organizationId,
+          actorId: member.id,
+          entityType: "MaintenanceRequest",
+          entityId: request.id,
+          action: "REQUEST_CREATED",
+        },
+      });
+      await event(
+        tx,
+        context.organizationId,
+        "MaintenanceRequest",
+        request.id,
+        "request.created",
+        0,
+      );
+      return request;
     });
   }
   orders(context: OrganizationContext, id?: string) {
     return this.scoped(
       context,
-      ["ADMIN", "DISPATCHER", "TECHNICIAN"],
+      ["ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER"],
       async (tx, member) => {
         const where: Prisma.WorkOrderWhereInput = {
           ...(id ? { id } : {}),
-          ...(member.role.name === "TECHNICIAN"
-            ? {
-                assignments: {
-                  some: {
-                    status: "ACTIVE",
-                    technician: { membershipId: member.id },
-                  },
-                },
-              }
-            : {}),
+          ...orderVisibility(member),
         };
-        if (!id) return tx.workOrder.findMany({ where, take: 100 });
-        const result = await tx.workOrder.findFirst({ where });
+        if (!id)
+          return tx.workOrder.findMany({
+            where,
+            take: 100,
+            orderBy: { createdAt: "desc" },
+          });
+        const result = await tx.workOrder.findFirst({
+          where,
+          include: orderDetail,
+        });
         if (!result) throw new NotFoundException();
-        return result;
+        const activity = await tx.auditLog.findMany({
+          where: { entityType: "WorkOrder", entityId: id },
+          orderBy: { createdAt: "asc" },
+          include: {
+            actor: { select: { user: { select: { displayName: true } } } },
+          },
+        });
+        return { ...result, activity };
+      },
+    );
+  }
+  technicians(context: OrganizationContext) {
+    return this.scoped(context, ["ADMIN", "DISPATCHER"], (tx) =>
+      tx.technicianProfile.findMany({
+        where: {
+          membership: {
+            status: "ACTIVE",
+            role: { name: "TECHNICIAN" },
+            user: { isActive: true },
+          },
+        },
+        select: {
+          id: true,
+          employeeCode: true,
+          membership: { select: { user: { select: { displayName: true } } } },
+        },
+        take: 100,
+      }),
+    );
+  }
+  notifications(context: OrganizationContext) {
+    return this.scoped(
+      context,
+      ["ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER"],
+      (tx, member) =>
+        tx.notification.findMany({
+          where: { recipientId: member.id },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        }),
+    );
+  }
+  readNotification(context: OrganizationContext, id: string) {
+    return this.scoped(
+      context,
+      ["ADMIN", "DISPATCHER", "TECHNICIAN", "CUSTOMER"],
+      async (tx, member) => {
+        const result = await tx.notification.updateMany({
+          where: { id, recipientId: member.id },
+          data: { readAt: new Date() },
+        });
+        if (!result.count) throw new NotFoundException();
+        await event(
+          tx,
+          context.organizationId,
+          "Notification",
+          id,
+          "notification.read",
+        );
+        return { id };
       },
     );
   }

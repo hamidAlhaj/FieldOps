@@ -1,6 +1,8 @@
 # FieldOps
 
-أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 4 — Frontend foundations (الدفعة الأولى)**. راجع [Component architecture والواجهة](docs/frontend.ar.md). راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 5 — Core business workflow**. راجع [دورة العمل وSocket.IO والاختبارات](docs/workflow.ar.md). راجع [Component architecture والواجهة](docs/frontend.ar.md). راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+
+[مراجعة المشروع والمعمارية وحالة المراحل](docs/project-review.ar.md).
 
 ## التشغيل المحلي
 
@@ -41,4 +43,4 @@ npm exec -w @fieldops/api -- prisma migrate deploy
 
 ## نطاق التنفيذ الحالي
 
-تم تنفيذ قاعدة البيانات والمصادقة والصلاحيات، ثم design system وapplication shell وauth UI وOverview وقائمة الأعمال. الواجهة في development تبدأ بـDemo واضح، ويمكن اختيار VITE_DATA_SOURCE=api. Realtime وعمليات الملفات وميزات Analytics وبقية الصفحات مؤجلة. راجع docs/authentication.ar.md للحدود التشغيلية؛ المرحلة التالية تتطلب موافقة صريحة.
+تم تنفيذ دورة Request → Review → WorkOrder → Assignment → Accept → In Progress → Completed → Verified → Closed، مع الصور والتقدم والإلغاء وإعادة التعيين وسجل النشاط. الواجهة تتصل بـAPI افتراضياً؛ `VITE_DATA_SOURCE=demo` للمعاينة المنفصلة فقط. Socket.IO يرسل إشارات تحديث مصادقاً عليها، وREST/PostgreSQL مصدر الحقيقة. التشغيل الحالي على API instance واحدة؛ راجع [التوثيق والحدود](docs/workflow.ar.md). Live GPS وAnalytics والمرحلة التالية تتطلب طلباً جديداً.

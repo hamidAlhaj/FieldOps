@@ -1,3 +1,10 @@
+import {
+  Requests,
+  RequestDetails,
+  WorkOrderDetails,
+  DemoWorkflow,
+} from "./features/workflow/Workflow";
+import { isDemo } from "./services";
 import { useEffect, useState } from "react";
 import {
   BrowserRouter,
@@ -126,10 +133,16 @@ function Application() {
           <Route
             path="requests"
             element={
-              <Protected customerOnly>
-                <WorkList />
-              </Protected>
+              <Protected>{isDemo ? <WorkList /> : <Requests />}</Protected>
             }
+          />
+          <Route
+            path="requests/:id"
+            element={isDemo ? <DemoWorkflow /> : <RequestDetails />}
+          />
+          <Route
+            path="work-orders/:id"
+            element={isDemo ? <DemoWorkflow /> : <WorkOrderDetails />}
           />
           <Route
             path="*"

@@ -1,4 +1,21 @@
-# نتائج التحقق — Stage 4، الدفعة الأولى
+# نتائج التحقق — Stage 5
+
+- نجح `typecheck` وproduction `build` للتطبيقين.
+- نجحت48 integration tests على PostgreSQL الحقيقي:18 Auth،18 database/isolation،12 workflow/Socket.IO. تشمل lifecycle كامل، ownership، cross-organization denial، stale/concurrent review/accept/progress/assign، rollback، invalid images، private photo reads، reassignment، cancellation، token expiry/revocation، event filtering وreconnection synchronization.
+- نجحت17 اختبارات عادية:8 NestJS و9 Vitest، بينها multipart boundary/Bearer والتحقق من response contracts وrefresh behavior.
+- migrations 005/006/007 طبّقت على development و`fieldops_test` دون reset. `prisma migrate diff` بين قاعدة التطوير وschema يعيد empty migration.
+- حدّثنا seed للأعمال القديمة قيد التنفيذ، وmigration القبول المستنتج تسجل provenance في AuditLog.
+- نجحت8 browser tests:6 Demo للتنقل والأدوار والثيمات والوصولية والمقاسات، و2 API للتسجيل والجلسات ودورة العمل الحقيقية.
+- نجح اختبار API browser لدورة العمل بين Customer وDispatcher وTechnician، مع رفع صور حقيقية وإكمال العمل والتحقق والإغلاق وظهور التغييرات بين الجلسات. صور الاختبار generated fixtures وليست صور مواقع فعلية.
+- اختبار workflow يفحص axe WCAG2 A/AA على شاشة الفني وغياب horizontal overflow بعرض390px؛ راجعنا screenshots لواجهة الهاتف وDispatcher. هذه مراجعة آلية محدودة وليست ضمان وصولية شامل.
+- تحديث sharp إلى0.35.5 يعالج تنبيهات الإصدار المضاف أولاً. آخر `npm audit --omit=dev`:14 تنبيهاً (13 high و1 moderate) في بقية شجرة التبعيات؛ لا ادعاء بأن المشروع جاهز للنشر الإنتاجي.
+- Runtime الحالي single API instance، lists حتى100 سجل، private image bytes فيDB. تفاصيل هذه الحدود في [مراجعة المشروع](project-review.ar.md) و[دورة العمل](workflow.ar.md).
+
+---
+
+## السجل السابق — Stage 4
+
+### نتائج الدفعة الأولى
 
 - نجح typecheck وproduction build لكل من API وWeb. قُسمت حزم UI/forms/query، وأصبحت fonts محلية من Latin subsets.
 - نجحت 16 اختبارات عادية: 8 NestJS سابقة و8 Vitest للواجهة وHTTP client/filters.
