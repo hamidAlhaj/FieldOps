@@ -103,6 +103,104 @@ describe("Authentication and resource authorization HTTP/PostgreSQL", () => {
     ).expect(200);
     expect(filtered.body.total).toBe(0);
   });
+  it("persists safe profile preferences and revokes all sessions on verified password change", async () => {
+    const hash = await argon2.hash(password);
+    const person = await db.user.create({
+      data: {
+        email: `profile-${randomUUID()}@example.test`,
+        displayName: "Profile Tester",
+        passwordHash: hash,
+      },
+    });
+    const session = await db.authSession.create({
+      data: { userId: person.id, expiresAt: new Date(Date.now() + 3600000) },
+    });
+    const access = await new JwtService({
+      secret: process.env.JWT_ACCESS_SECRET,
+    }).signAsync(
+      { sub: person.id, sid: session.id },
+      {
+        issuer: "fieldops-api",
+        audience: "fieldops-web",
+        algorithm: "HS256",
+        expiresIn: "15m",
+      },
+    );
+    const profile = {
+      displayName: "Updated profile",
+      theme: "dark",
+      notifyAssignments: false,
+      notifyStatusUpdates: true,
+    };
+    const updated = await request(app.getHttpServer())
+      .patch("/api/v1/auth/profile")
+      .set("Origin", origin)
+      .auth(access, { type: "bearer" })
+      .send(profile)
+      .expect(200);
+    expect(updated.body).toMatchObject(profile);
+    expect(updated.body).not.toHaveProperty("passwordHash");
+    await request(app.getHttpServer())
+      .patch("/api/v1/auth/profile")
+      .set("Origin", origin)
+      .auth(access, { type: "bearer" })
+      .send({ ...profile, email: "other@example.test" })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/password")
+      .set("Origin", origin)
+      .auth(access, { type: "bearer" })
+      .send({
+        currentPassword: "Wrong-password-2026!",
+        newPassword: "New-safe-password-2026!",
+      })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/password")
+      .set("Origin", origin)
+      .auth(access, { type: "bearer" })
+      .send({
+        currentPassword: password,
+        newPassword: "New-safe-password-2026!",
+      })
+      .expect(204);
+    await request(app.getHttpServer())
+      .get("/api/v1/auth/profile")
+      .auth(access, { type: "bearer" })
+      .expect(401);
+    expect(
+      await argon2.verify(
+        (await db.user.findUniqueOrThrow({ where: { id: person.id } }))
+          .passwordHash!,
+        "New-safe-password-2026!",
+      ),
+    ).toBe(true);
+  });
+  it("lists tenant members with filters and manages only own team membership", async () => {
+    await get(
+      "administration/members?role=TECHNICIAN&search=Omar",
+      "admin",
+    ).expect(200);
+    await get("administration/members", "dispatcher").expect(403);
+    const team = await db.team.create({
+      data: { organizationId: org, name: `Team ${randomUUID()}` },
+    });
+    await request(app.getHttpServer())
+      .post(path(`administration/teams/${team.id}/members`))
+      .auth(tokens.admin, { type: "bearer" })
+      .send({ membershipId: id("aleppo:tech1") })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(path(`administration/teams/${team.id}/members`))
+      .auth(tokens.admin, { type: "bearer" })
+      .send({ membershipId: id("damascus:tech1") })
+      .expect(201);
+    await request(app.getHttpServer())
+      .delete(path(`teams/${team.id}`))
+      .auth(tokens.admin, { type: "bearer" })
+      .expect(204);
+    expect(await db.teamMember.count({ where: { teamId: team.id } })).toBe(0);
+  });
   it("registers with Argon2id, private cookie and no hash/token disclosure", async () => {
     const r = await request(app.getHttpServer())
       .post("/api/v1/auth/register")

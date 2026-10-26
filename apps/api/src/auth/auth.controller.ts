@@ -1,3 +1,5 @@
+import { Patch, Body as ProfileBody } from "@nestjs/common";
+import { ProfileDto, PasswordDto } from "./profile.dto";
 import {
   Body,
   Controller,
@@ -120,5 +122,31 @@ export class AuthController {
   ) {
     response.setHeader("Cache-Control", "no-store");
     return this.auth.current(user.id);
+  }
+  @Get("profile") @ApiBearerAuth() profile(
+    @CurrentUser() user: Principal,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.setHeader("Cache-Control", "no-store");
+    return this.auth.profile(user.id);
+  }
+  @Patch("profile") @ApiBearerAuth() updateProfile(
+    @CurrentUser() user: Principal,
+    @ProfileBody() dto: ProfileDto,
+  ) {
+    return this.auth.updateProfile(user.id, dto);
+  }
+  @Post("password")
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async password(
+    @CurrentUser() user: Principal,
+    @ProfileBody() dto: PasswordDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.auth.changePassword(user.id, dto);
+    response.clearCookie(refreshCookie, this.options());
+    response.setHeader("Cache-Control", "no-store");
   }
 }

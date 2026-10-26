@@ -1,3 +1,4 @@
+import { AdministrationModule } from "./administration/administration.module";
 import { ReportingModule } from "./reporting/reporting.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { AuthModule } from "./auth/auth.module";
@@ -7,7 +8,7 @@ import { Module } from "@nestjs/common";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthController } from "./health/health.controller";
 @Module({
-  imports: [
+  imports: [AdministrationModule,
     ReportingModule,
     PrismaModule,
     AuthModule,

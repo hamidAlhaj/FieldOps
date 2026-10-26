@@ -2,6 +2,7 @@ import { event } from "../realtime/events";
 import { orderVisibility, orderDetail } from "./visibility";
 import {
   ForbiddenException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -43,7 +44,19 @@ export class ResourceService {
   }
   teams(context: OrganizationContext) {
     return this.scoped(context, ["ADMIN"], (tx) =>
-      tx.team.findMany({ take: 100 }),
+      tx.team.findMany({
+        take: 100,
+        include: {
+          members: {
+            select: {
+              membershipId: true,
+              membership: {
+                select: { user: { select: { displayName: true } } },
+              },
+            },
+          },
+        },
+      }),
     );
   }
   createTeam(context: OrganizationContext, dto: TeamDto) {
@@ -65,6 +78,9 @@ export class ResourceService {
   }
   deleteTeam(context: OrganizationContext, id: string) {
     return this.scoped(context, ["ADMIN"], async (tx) => {
+      if (await tx.workOrder.count({ where: { teamId: id } }))
+        throw new ConflictException("Team has work orders; keep its history");
+      await tx.teamMember.deleteMany({ where: { teamId: id } });
       const result = await tx.team.deleteMany({ where: { id } });
       if (!result.count) throw new NotFoundException();
     });

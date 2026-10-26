@@ -1,3 +1,4 @@
+import { ProfileDto, PasswordDto } from "./profile.dto";
 import { z } from "zod";
 import {
   BadRequestException,
@@ -101,8 +102,9 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     if (!valid || !user?.isActive || !user.passwordHash)
       throw new UnauthorizedException("Invalid credentials");
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id}::uuid FOR UPDATE`;
       const current = await tx.user.findFirst({
-        where: { id: user.id, isActive: true },
+        where: { id: user.id, isActive: true, passwordHash: user.passwordHash },
         select: publicUser,
       });
       if (!current) throw new UnauthorizedException("Invalid credentials");
@@ -208,6 +210,51 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     });
     if (!session) throw new UnauthorizedException();
     return { ...session.user, sessionId };
+  }
+  async profile(userId: string) {
+    return this.db.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        ...publicUser,
+        theme: true,
+        notifyAssignments: true,
+        notifyStatusUpdates: true,
+      },
+    });
+  }
+  async updateProfile(userId: string, dto: ProfileDto) {
+    await this.db.user.update({
+      where: { id: userId },
+      data: dto,
+      select: { id: true },
+    });
+    return this.profile(userId);
+  }
+  async changePassword(userId: string, dto: PasswordDto) {
+    if (dto.newPassword === dto.currentPassword)
+      throw new BadRequestException("Choose a different password");
+    const hash = await this.hash(dto.newPassword);
+    await this.db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
+        const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+        if (
+          !user.isActive ||
+          !user.passwordHash ||
+          !(await argon2.verify(user.passwordHash, dto.currentPassword))
+        )
+          throw new UnauthorizedException("Current password is incorrect");
+        await tx.user.update({
+          where: { id: userId },
+          data: { passwordHash: hash },
+        });
+        await tx.authSession.updateMany({
+          where: { userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      },
+      { timeout: 15000 },
+    );
   }
   async current(userId: string) {
     return this.db.user.findUniqueOrThrow({

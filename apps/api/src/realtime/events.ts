@@ -18,6 +18,8 @@ export async function notify(
   title: string,
   body: string,
 ) {
+  const member = await tx.membership.findUniqueOrThrow({ where: { id: recipientId }, select: { user: { select: { notifyAssignments: true } } } });
+  if (!member.user.notifyAssignments) return;
   const notification = await tx.notification.create({
     data: { organizationId, recipientId, type: "ASSIGNMENT", title, body },
   });

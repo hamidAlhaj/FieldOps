@@ -85,6 +85,9 @@ model Organization {
 }
 
 model User {
+  theme String @default("light") @db.VarChar(5)
+  notifyAssignments Boolean @default(true)
+  notifyStatusUpdates Boolean @default(true)
   id           String        @id @default(uuid()) @db.Uuid
   passwordHash String?
   sessions     AuthSession[]
