@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -13,9 +13,12 @@ export type VisibleFix = TrackedLocation & {
 
 function Viewport({ points }: { points: VisibleFix[] }) {
   const map = useMap();
+  const coordinatesKey = points.map((s) => `${s.latitude},${s.longitude}`).join("|");
   const bounds = useMemo(
     () => points.map((s): LatLngTuple => [s.latitude, s.longitude]),
-    [points],
+    // Only reframe the map when geographic coordinates actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [coordinatesKey],
   );
   useEffect(() => {
     if (bounds.length === 0) return;
@@ -51,8 +54,8 @@ export function TrackingMap({ sessions }: { sessions: VisibleFix[] }) {
         />
         <Viewport points={available} />
         {available.map((tech) => (
+          <Fragment key={tech.id}>
           <CircleMarker
-            key={tech.id}
             center={[tech.latitude, tech.longitude]}
             radius={10}
             pathOptions={{
@@ -85,6 +88,7 @@ export function TrackingMap({ sessions }: { sessions: VisibleFix[] }) {
               </span>
             </Popup>
           </CircleMarker>
+          </Fragment>
         ))}
       </MapContainer>
     </div>
