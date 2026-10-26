@@ -26,16 +26,16 @@ export function TrackingPage() {
   }
 
   const elapsedMs = tracking.dataUpdatedAt ? Math.max(0, tracking.now - tracking.dataUpdatedAt) : 0;
-  const all = tracking.sessions;
-  const fixes: VisibleFix[] = all.filter(hasReportedPosition).map((s) => ({
+  const serverClock = tracking.data ? Date.parse(tracking.data.serverTime) : NaN;
+  // Never display a session after its server-issued lease expires, even while
+  // the tab is hidden and polling is paused.
+  const all = Number.isFinite(serverClock)
+    ? tracking.sessions.filter((s) => Date.parse(s.expiresAt) > serverClock + elapsedMs)
+    : [];
+  const displayed: VisibleFix[] = all.filter(hasReportedPosition).map((s) => ({
     ...s,
     displayStale: isStaleLocation(s, tracking.data!.serverTime, elapsedMs),
   }));
-  // Avoid showing expired leases on a dashboard that has temporarily lost polling.
-  const serverClock = tracking.data ? Date.parse(tracking.data.serverTime) : NaN;
-  const displayed = Number.isFinite(serverClock)
-    ? fixes.filter((s) => Date.parse(s.expiresAt) > serverClock + elapsedMs)
-    : [];
   const waiting = all.filter((s) => !hasReportedPosition(s));
 
   return (
