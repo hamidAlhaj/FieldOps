@@ -2299,3 +2299,25 @@ input[aria-invalid="true"] {
 .location-sharing > * { min-width: 0; max-width: 100%; }
 .location-sharing .sharing-heading { flex-wrap: wrap; }
 .location-sharing .button { max-width: 100%; white-space: normal; text-align: center; }
+
+
+/* Stage 6B scheduling — inherit FieldOps light/dark color tokens. */
+.schedule-page .eyebrow { display:flex; gap:8px; align-items:center; }
+.schedule-summary {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.schedule-summary .workflow-card {display:grid;gap:8px;margin-bottom:0;min-width:0;}
+.schedule-summary svg {color:var(--purple);}
+.schedule-summary strong {font-size:17px;overflow-wrap:anywhere;}
+.schedule-summary small {font-size:12px;color:var(--muted);}
+.schedule-editor-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;}
+.schedule-editor-grid>.workflow-card{min-width:0;}
+.schedule-editor-grid>.workflow-card:last-child:nth-child(odd){grid-column:1/-1;}
+.schedule-shift {display:grid;grid-template-columns:minmax(125px,1fr) minmax(95px,1fr) minmax(95px,1fr) auto;gap:12px;align-items:end;}
+.schedule-shift label,.schedule-datetime-row label{min-width:0;}
+.schedule-shift select,.schedule-shift input {min-width:0;}
+.schedule-datetime-row {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.schedule-time-off {display:flex;justify-content:space-between;align-items:center;gap:15px;line-height:1.6;flex-wrap:wrap;font-size:12px;border-bottom:1px solid var(--border);padding-bottom:12px;}
+.schedule-skill-list{display:flex;gap:9px 22px;flex-wrap:wrap;align-items:center;min-height:36px;}
+.schedule-skill-list .sharing-consent {margin:0;padding:7px 0;}
+.schedule-conflict{padding:12px 14px;border-radius:12px;border:1px solid #bb754b;background:var(--purple-soft);color:var(--ink);font-size:12px;display:flex;align-items:flex-start;gap:10px;overflow-wrap:anywhere;}
+@media(max-width:970px){.schedule-editor-grid {grid-template-columns:1fr;}.schedule-editor-grid>.workflow-card:last-child:nth-child(odd){grid-column:auto;}}
+@media(max-width:650px){.schedule-summary{grid-template-columns:1fr;}.schedule-shift{grid-template-columns:repeat(2,minmax(0,1fr));}.schedule-shift .button{grid-column:1/-1;}.schedule-datetime-row {grid-template-columns:1fr;}.schedule-page .workflow-form{min-width:0;}}
