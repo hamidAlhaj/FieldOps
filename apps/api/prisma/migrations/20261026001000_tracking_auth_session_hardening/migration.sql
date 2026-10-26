@@ -96,3 +96,25 @@ $$;
 REVOKE ALL ON FUNCTION public.fieldops_tracking_auth_is_active(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fieldops_tracking_auth_is_active(uuid)
   TO fieldops_app;
+
+-- Membership is deliberately read-only to fieldops_app. Row locking needs
+-- higher privileges, so authorize it in a narrowly scoped SECURITY DEFINER helper.
+CREATE FUNCTION public.fieldops_tracking_membership_lock(tenant_id uuid, actor_id uuid)
+RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+BEGIN
+  IF tenant_id IS DISTINCT FROM
+       nullif(current_setting('app.organization_id', true), '')::uuid
+     OR actor_id IS DISTINCT FROM
+       nullif(current_setting('app.actor_id', true), '')::uuid
+  THEN RETURN FALSE;
+  END IF;
+  PERFORM id FROM public."Membership"
+    WHERE "organizationId"=tenant_id AND "userId"=actor_id
+      AND status='ACTIVE'
+    FOR SHARE;
+  RETURN FOUND;
+END $$;
+REVOKE ALL ON FUNCTION public.fieldops_tracking_membership_lock(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fieldops_tracking_membership_lock(uuid,uuid) TO fieldops_app;
