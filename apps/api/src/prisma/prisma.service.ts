@@ -58,7 +58,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2034"
+        (error.code === "P2034" ||
+          (error.code === "P2010" &&
+            ["40001", "40P01"].includes(String(error.meta?.code))))
       ) {
         throw new ConflictException(
           "Concurrent change detected; reload and retry",
