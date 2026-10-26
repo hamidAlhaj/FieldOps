@@ -79,3 +79,15 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.fieldops_tracking_user_end() FROM PUBLIC;
 CREATE TRIGGER "TrackingSession_user_end" AFTER UPDATE OF "isActive" ON "User" FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_user_end();
+
+CREATE FUNCTION public.fieldops_tracking_workorder_end() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+  IF NEW.status NOT IN ('ASSIGNED','IN_PROGRESS') THEN
+    UPDATE public."TrackingSession" SET "endedAt"=COALESCE("endedAt",CURRENT_TIMESTAMP),
+      latitude=NULL,longitude=NULL,"accuracyMeters"=NULL,"recordedAt"=NULL,"receivedAt"=NULL
+    WHERE "organizationId"=NEW."organizationId" AND "workOrderId"=NEW.id AND "endedAt" IS NULL;
+  END IF;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.fieldops_tracking_workorder_end() FROM PUBLIC;
+CREATE TRIGGER "TrackingSession_workorder_end" AFTER UPDATE OF status ON "WorkOrder" FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_workorder_end();
