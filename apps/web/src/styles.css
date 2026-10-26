@@ -2165,3 +2165,15 @@ input[aria-invalid="true"] {
     flex: 1 1 180px;
   }
 }
+
+.workflow-form label:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workflow-form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  flex-shrink: 0;
+}

@@ -38,7 +38,7 @@ test("real registration, session restoration, error recovery and logout against 
   await expect(page.getByLabel("Team name", { exact: true })).toHaveValue(
     "Browser operations team",
   );
-  await page.screenshot({
+  await page.screenshot({ animations: "disabled", timeout: 30000,
     path: "/tmp/fieldops-stage4-administration.png",
     fullPage: true,
   });
@@ -53,7 +53,7 @@ test("real registration, session restoration, error recovery and logout against 
   await expect(page.getByLabel("Display name")).toHaveValue(
     "Updated Browser Manager",
   );
-  await page.screenshot({
+  await page.screenshot({ animations: "disabled", timeout: 30000,
     path: "/tmp/fieldops-stage4-profile.png",
     fullPage: true,
   });
@@ -62,7 +62,7 @@ test("real registration, session restoration, error recovery and logout against 
     page.getByRole("heading", { name: "Analytics & reports", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("No completions in this period.")).toBeVisible();
-  await page.screenshot({
+  await page.screenshot({ animations: "disabled", timeout: 30000,
     path: "/tmp/fieldops-stage6-analytics.png",
     fullPage: true,
   });
@@ -71,7 +71,7 @@ test("real registration, session restoration, error recovery and logout against 
     page.getByRole("heading", { name: "Audit log", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("No matching actions.")).toBeVisible();
-  await page.screenshot({
+  await page.screenshot({ animations: "disabled", timeout: 30000,
     path: "/tmp/fieldops-stage6-audit.png",
     fullPage: true,
   });
@@ -272,7 +272,7 @@ test("customer → dispatch → technician evidence → verification and closure
     ).toBe(true);
     await technician.locator("#main-content").focus();
     await technician.evaluate(() => window.scrollTo(0, 0));
-    await technician.screenshot({
+    await technician.screenshot({ animations: "disabled", timeout: 30000,
       path: "/tmp/fieldops-stage5-technician.png",
       fullPage: true,
     });
@@ -290,7 +290,7 @@ test("customer → dispatch → technician evidence → verification and closure
     await expect(customer.getByText("RESOLVED", { exact: true })).toBeVisible();
     await dispatch.locator("#main-content").focus();
     await dispatch.evaluate(() => window.scrollTo(0, 0));
-    await dispatch.screenshot({
+    await dispatch.screenshot({ animations: "disabled", timeout: 30000,
       path: "/tmp/fieldops-stage5-dispatch.png",
       fullPage: true,
     });

@@ -185,7 +185,7 @@ export function AppShell() {
             <span>Workspace</span>
             <span>/</span>
             <strong>
-              {location.pathname === "/"
+              {location.pathname.startsWith("/profile") ? "Profile & settings" : location.pathname.startsWith("/administration") ? "People & teams" : location.pathname.startsWith("/analytics") ? "Analytics & reports" : location.pathname.startsWith("/audit-logs") ? "Audit log" : location.pathname === "/"
                 ? "Overview"
                 : membership?.role.name === "CUSTOMER"
                   ? "My requests"
