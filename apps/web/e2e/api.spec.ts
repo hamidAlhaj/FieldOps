@@ -232,7 +232,8 @@ test("customer → dispatch → technician evidence → verification and closure
     await dispatch.getByRole("button", { name: "Save planned schedule" }).click();
     await expect(dispatch.getByText("Planned end:", { exact: false }).first()).toBeVisible();
     await expect(dispatch.getByText("Estimated duration:")).toBeVisible();
-    await technician.getByRole("link", { name: "Scheduling" }).click();
+    await technician.getByRole("button", { name: "Open navigation" }).click();
+    await technician.getByRole("link", { name: "Scheduling" }).last().click();
     await expect(technician.getByRole("heading", { name: "Technician availability" })).toBeVisible();
     await expect(technician.getByLabel("Declared availability")).toHaveValue("AVAILABLE");
     await technician.goto("/");
