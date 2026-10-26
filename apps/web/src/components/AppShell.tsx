@@ -76,6 +76,12 @@ function Sidebar({ close }: { close?: () => void }) {
               Analytics & reports
             </NavLink>
           )}
+        {!isDemo && ["ADMIN", "DISPATCHER"].includes(membership?.role.name ?? "") && (
+          <NavLink to="/tracking" onClick={close}>
+            <MapPin size={19} />
+            Live tracking
+          </NavLink>
+        )}
         {!isDemo && membership?.role.name === "ADMIN" && (
           <NavLink to="/audit-logs" onClick={close}>
             <Activity size={19} />
@@ -101,10 +107,7 @@ function Sidebar({ close }: { close?: () => void }) {
           <Users size={18} />
           Technicians
         </span>
-        <span>
-          <MapPin size={18} />
-          Live tracking
-        </span>
+
       </div>
       <div className="sidebar-bottom">
         <div className="sidebar-note">
@@ -185,7 +188,7 @@ export function AppShell() {
             <span>Workspace</span>
             <span>/</span>
             <strong>
-              {location.pathname.startsWith("/profile") ? "Profile & settings" : location.pathname.startsWith("/administration") ? "People & teams" : location.pathname.startsWith("/analytics") ? "Analytics & reports" : location.pathname.startsWith("/audit-logs") ? "Audit log" : location.pathname === "/"
+              {location.pathname.startsWith("/profile") ? "Profile & settings" : location.pathname.startsWith("/administration") ? "People & teams" : location.pathname.startsWith("/tracking") ? "Live tracking" : location.pathname.startsWith("/analytics") ? "Analytics & reports" : location.pathname.startsWith("/audit-logs") ? "Audit log" : location.pathname === "/"
                 ? "Overview"
                 : membership?.role.name === "CUSTOMER"
                   ? "My requests"
@@ -298,7 +301,7 @@ export function AppShell() {
           </div>
         )}
         <main id="main-content" className="page-content" tabIndex={-1}>
-          <Outlet />
+          <Outlet context={{ connected }} />
         </main>
         <footer className="workspace-footer">
           <span>FieldOps — built for better days in the field.</span>
