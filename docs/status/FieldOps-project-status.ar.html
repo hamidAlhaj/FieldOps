@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FieldOps — تقرير حالة المشروع</title></head><body>
+<style>
+/* ===== Base ===== */
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #000000;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== H1: main title - BLUE ===== */
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1671d3;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  border: none;
+  padding: 0;
+}
+
+/* ===== H2: main sections - BLUE ===== */
+h2 {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1671d3;
+  margin-top: 22px;
+  margin-bottom: 10px;
+  border: none;
+  padding: 0;
+}
+
+/* ===== H3: sub-sections - BLUE ===== */
+h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1671d3;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  border: none;
+  padding: 0;
+}
+
+/* ===== H4: minor - black ===== */
+h4,
+h5,
+h6 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+/* ===== Paragraphs ===== */
+p {
+  margin: 8px 0;
+  color: #000000;
+}
+
+strong {
+  font-weight: 700;
+  color: #000000;
+}
+
+em {
+  font-style: italic;
+}
+
+/* ===== Code inline ===== */
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  background-color: #f5f5f5;
+  color: #000000;
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: none;
+}
+
+/* ===== Code blocks ===== */
+pre {
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 2px;
+  padding: 12px 14px;
+  margin: 10px 0;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  color: #000000;
+  padding: 0;
+  font-size: 100%;
+  border: none;
+}
+
+/* ===== Tables ===== */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 13.5px;
+}
+
+th {
+  background-color: #f5f5f5;
+  border: 1px solid #cccccc;
+  padding: 7px 10px;
+  text-align: left;
+  font-weight: 700;
+  color: #000000;
+}
+
+td {
+  border: 1px solid #cccccc;
+  padding: 7px 10px;
+  text-align: left;
+  color: #000000;
+}
+
+/* ===== Lists ===== */
+ul,
+ol {
+  padding-left: 22px;
+  margin: 8px 0;
+}
+
+li {
+  margin-bottom: 3px;
+  color: #000000;
+}
+
+/* ===== Blockquotes ===== */
+blockquote {
+  border-left: 3px solid #1671d3;
+  padding: 4px 12px;
+  margin: 10px 0;
+  color: #333333;
+  background: #f8fafc;
+}
+
+/* ===== Horizontal rule ===== */
+hr {
+  border: none;
+  border-top: 1px solid #cccccc;
+  margin: 18px 0;
+}
+
+/* ===== Links ===== */
+a {
+  color: #1671d3;
+  text-decoration: none;
+}
+
+/* ===== Print ===== */
+@media print {
+  h1,
+  h2,
+  h3,
+  h4 {
+    page-break-after: avoid;
+  }
+  pre,
+  table,
+  blockquote {
+    page-break-inside: avoid;
+  }
+  @page {
+    margin: 0.75in;
+  }
+}
+/* ===== Code Block - Styled ===== */
+
+pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #333333;
+  border-left: 4px solid #1671d3;
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 14px 0;
+  overflow-x: auto;
+
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+  font-size: 13px;
+  line-height: 1.6;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Code inside the block */
+pre code {
+  background: transparent;
+  color: #d4d4d4;
+  border: none;
+  padding: 0;
+  margin: 0;
+
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Inline code */
+code {
+  background: #f1f3f5;
+  color: #c7254e;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* Scrollbar inside code blocks */
+pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+pre::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+pre::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+pre::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* ===== Code Blocks - Light Print Style ===== */
+
+pre {
+  background-color: #f1f3f5 !important;
+  color: #111111 !important;
+
+  border: 1px solid #d6d9dd !important;
+  border-left: 4px solid #1671d3 !important;
+  border-radius: 5px !important;
+
+  padding: 15px 17px !important;
+  margin: 14px 0 !important;
+
+  overflow-x: auto;
+
+  font-family:
+    "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+    monospace !important;
+
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+
+  white-space: pre-wrap;
+  word-break: normal;
+
+  /* Keep background when exporting/printing */
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+pre code {
+  background: transparent !important;
+  color: #111111 !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+
+  font-family:
+    "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+    monospace !important;
+
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+}
+
+/* Arabic report: direction only; preserve the supplied palette and typography. */
+body { direction: rtl; text-align: right; }
+th, td { text-align: right; }
+ul, ol { padding-right: 22px; padding-left: 0; }
+blockquote { border-left: none; border-right: 3px solid #1671d3; }
+pre { direction: ltr; text-align: left; unicode-bidi: isolate; }
+code { direction: ltr; unicode-bidi: isolate; }
+a { overflow-wrap: anywhere; }
+@media print { thead { display: table-header-group; } tr { break-inside: avoid; } table { page-break-inside: auto; } }
+
+</style><h1>FieldOps — تقرير المشروع والمراحل</h1>
+<p><strong>تاريخ التقرير:</strong> 26 أكتوبر 2026<br><strong>المستودع:</strong> hamidAlhaj/FieldOps<br><strong>الفرع:</strong> main<br><strong>مرجع النسخة البرمجية المفحوصة:</strong> <code>628048c</code><br><strong>نوع التقرير:</strong> مراجعة حالة التنفيذ، وليست شهادة جاهزية للنشر الإنتاجي.</p>
+<h2>1. نبذة عن المشروع</h2>
+<p>FieldOps نظام لإدارة خدمات الصيانة الميدانية وتوزيع المهام. يربط العميل الذي يبلغ عن مشكلة، والموظف الذي يراجع الطلب ويوزع العمل، والفني الذي ينفذه، ومدير المؤسسة الذي يدير الصلاحيات ويتابع النتائج.</p>
+<p>الهدف هو الاحتفاظ بدورة واضحة للعمل منذ إنشاء طلب الصيانة وحتى التحقق من التنفيذ وإغلاقه، مع الصور والملاحظات والإشعارات وسجل النشاط. يدعم النظام مؤسسات متعددة مع عزل بيانات كل مؤسسة.</p>
+<h3>الأدوار</h3>
+<table>
+<thead>
+<tr>
+<th>الدور</th>
+<th>المسؤولية</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Admin</td>
+<td>إدارة الموارد والصلاحيات داخل مؤسسته، والاطلاع على التقارير وسجل التدقيق</td>
+</tr>
+<tr>
+<td>Dispatcher</td>
+<td>مراجعة الطلبات، تعيين الفنيين، متابعة الأعمال والتحقق من إنجازها</td>
+</tr>
+<tr>
+<td>Technician</td>
+<td>الوصول إلى الأعمال المصرح بها، قبول التكليف، التنفيذ ورفع الصور والتقدم</td>
+</tr>
+<tr>
+<td>Customer</td>
+<td>إنشاء طلباته ومتابعة حالتها والأعمال المرتبطة بها</td>
+</tr>
+</tbody></table>
+<h2>2. أين وصل المشروع الآن؟</h2>
+<p><strong>من أصل ست مراحل محددة في طلبات المشروع: أربع مراحل مكتملة ضمن نطاقها، ومرحلتان غير مكتملتين.</strong></p>
+<table>
+<thead>
+<tr>
+<th>المرحلة</th>
+<th>العنوان المعتمد</th>
+<th>الحالة</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Stage 1</td>
+<td>تأسيس المشروع والمعمارية وبيئة التشغيل</td>
+<td>مكتملة ضمن نطاق التأسيس</td>
+</tr>
+<tr>
+<td>Stage 2</td>
+<td>PostgreSQL وPrisma وتصميم قاعدة البيانات</td>
+<td>مكتملة ضمن النطاق الأصلي</td>
+</tr>
+<tr>
+<td>Stage 3</td>
+<td>Authentication وAuthorization</td>
+<td>مكتملة ضمن النطاق الأصلي</td>
+</tr>
+<tr>
+<td>Stage 4</td>
+<td>الواجهة وتجربة الاستخدام</td>
+<td>مكتملة جزئياً</td>
+</tr>
+<tr>
+<td>Stage 5</td>
+<td>دورة الصيانة وأوامر العمل</td>
+<td>مكتملة ضمن نطاقها</td>
+</tr>
+<tr>
+<td>Stage 6</td>
+<td>القدرات المتقدمة</td>
+<td>مكتملة جزئياً</td>
+</tr>
+</tbody></table>
+<p><strong>عدد المراحل المتبقية للإغلاق: مرحلتان، هما Stage 4 وStage 6.</strong> هذا عدد مراحل، وليس تقديراً زمنياً أوعدد مهام متساوية الحجم. لا توجد في الطلبات الحالية مرحلة سابعة محددة يمكن احتسابها.</p>
+<p>هذا التقرير يعتمد ترقيم طلبات المستخدم الأحدث. بعض وثائق التأسيس القديمة تحتوي خارطة إرشادية مختلفة في أسماء المراحل؛ لا تُستخدم تلك الخارطة لتحديد حالة الإنجاز الحالية.</p>
+<h2>3. التقنيات المستخدمة</h2>
+<table>
+<thead>
+<tr>
+<th>المجال</th>
+<th>التقنيات</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Frontend</td>
+<td>React، TypeScript، Vite، Tailwind CSS</td>
+</tr>
+<tr>
+<td>تنظيم الواجهة</td>
+<td>React Router، TanStack Query، Zustand</td>
+</tr>
+<tr>
+<td>النماذج والتحقق</td>
+<td>React Hook Form، Zod، class-validator</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>NestJS، TypeScript، REST API</td>
+</tr>
+<tr>
+<td>قاعدة البيانات</td>
+<td>PostgreSQL، Prisma، migrations</td>
+</tr>
+<tr>
+<td>المصادقة</td>
+<td>Passport، JWT، Argon2، rotating Refresh Tokens</td>
+</tr>
+<tr>
+<td>التحديثات الفورية</td>
+<td>Socket.IO، Transactional Outbox</td>
+</tr>
+<tr>
+<td>الصور</td>
+<td>sharp لإعادة الترميز، Attachment metadata وPhotoContent داخل PostgreSQL</td>
+</tr>
+<tr>
+<td>التوثيق والاختبارات</td>
+<td>Swagger، Jest، Supertest، Vitest، Playwright</td>
+</tr>
+<tr>
+<td>التشغيل المحلي</td>
+<td>npm workspaces، Docker Compose لخدمة PostgreSQL</td>
+</tr>
+<tr>
+<td>الخرائط المستهدفة</td>
+<td>Leaflet وOpenStreetMap؛ التكامل غير منفذ في النسخة المفحوصة</td>
+</tr>
+</tbody></table>
+<h2>4. المعمارية الحالية</h2>
+<p>النظام مبني على Modular Monolith: تطبيق NestJS بوحدات واضحة، وتطبيق React مستقل، وقاعدة PostgreSQL مشتركة ذات عزل للمؤسسات. لا توجد حاجة حالية لتقسيمه إلى Microservices.</p>
+<pre><code class="language-text">React pages and shared components
+        |
+        v
+TanStack Query + Zod contracts + HTTP client
+        |
+        v
+NestJS REST Controllers + validated DTOs
+        |
+        v
+JWT / active session / organization / role checks
+        |
+        v
+Business Services + resource ownership checks
+        |
+        v
+PrismaService: tenant context + Serializable transactions
+        |
+        v
+PostgreSQL: business data + RLS + audit + private photo bytes
+        |
+        v
+Transactional Outbox -&gt; Socket.IO -&gt; invalidate queries -&gt; REST refetch
+</code></pre>
+<h3>توزيع المسؤوليات</h3>
+<ul>
+<li><strong>Controllers:</strong> استقبال الطلبات وتطبيق DTO validation وتوجيهها للخدمات.</li>
+<li><strong>Guards:</strong> التحقق من الهوية والعضوية والدور؛ إخفاء الأزرار في الواجهة لا يمنح الصلاحيات.</li>
+<li><strong>Business Services:</strong> قواعد الانتقال بين الحالات، ملكية المورد، التعيين والتقدم والصور.</li>
+<li><strong>PrismaService:</strong> تنفيذ العمليات ضمن المؤسسة وداخل transactions مع ضبط سياق قاعدة البيانات.</li>
+<li><strong>PostgreSQL:</strong> حفظ الحقيقة النهائية، وفرض RLS وForeign Keys وقيود منع التعيين النشط المكرر.</li>
+<li><strong>TanStack Query:</strong> الاحتفاظ ببيانات الخادم وإعادة قراءتها بعد تغييرات العمل والأحداث.</li>
+<li><strong>Zustand:</strong> الهوية الحالية والمؤسسة المختارة والثيم وحالة الواجهة الخفيفة.</li>
+<li><strong>ReportingModule:</strong> قراءة المؤشرات والسجلات مع صلاحيات المؤسسة والدور.</li>
+</ul>
+<h3>لماذا قاعدة البيانات مصدر الحقيقة؟</h3>
+<p>يحفظ الخادم تغيير العمل وسجله وحدث Outbox داخل transaction واحدة. Socket.IO يرسل إشارات تحديث محدودة، ثم تعيد الواجهة قراءة البيانات من REST. عند إعادة الاتصال توجد مزامنة، ولا يُعتمد على وصول كل حدث بالترتيب لتحديد الحالة النهائية.</p>
+<h3>بنية الملفات الرئيسية</h3>
+<pre><code class="language-text">FieldOps/
+  apps/
+    api/
+      prisma/
+        schema.prisma
+        migrations/
+        seed.cjs
+      src/
+        auth/
+        config/
+        health/
+        prisma/
+        resources/
+        work-orders/
+        realtime/
+        reporting/
+      test/
+    web/
+      src/
+        components/
+        features/
+          auth/
+          operations/
+          workflow/
+          reporting/
+          tracking/       # inactive client foundation
+        services/
+        state/
+        styles.css
+      e2e/
+  packages/contracts/
+  docs/
+  compose.yaml
+</code></pre>
+<h2>5. Stage 1 — تأسيس المشروع</h2>
+<p><strong>الحالة: مكتملة ضمن النطاق المطلوب.</strong></p>
+<p>أُنجز إعداد Monorepo باستخدام npm workspaces، وأساس React وNestJS، وإعدادات TypeScript والتشغيل، وDocker Compose لقاعدة البيانات، وSwagger وHealth/Readiness endpoints وأوامر الفحص والبناء.</p>
+<p>اكتمال التأسيس لا يعني أن CI/CD أوLoad Testing أوخطة النشر الإنتاجي الشاملة قد أُنجزت؛ هذه متطلبات تشغيلية منفصلة.</p>
+<h2>6. Stage 2 — تصميم قاعدة البيانات</h2>
+<p><strong>الحالة: مكتملة ضمن النطاق الأصلي.</strong></p>
+<p>أُنجزت نماذج Organizations وUsers وRoles وMemberships وTechnician Profiles وTeams وCustomer Profiles وRequests وWorkOrders وAssignments وStatus History وAttachments وNotifications وAudit Logs. توجد أيضاً بنية قديمة لـTechnicianLocationUpdate، لكن وجود جدول للموقع لا يعني وجود خدمة تتبع عاملة.</p>
+<p>النماذج تستعمل UUID وForeign Keys مركبة وIndexes وقيوداً مناسبة. توجد migrations وseed واختبارات عزل المؤسسات، وPrismaService قابل لإعادة الاستخدام. تمت إضافة نماذج مساندة لاحقاً للجلسات والصور والتقدم وOutbox.</p>
+<p><strong>ما سيضاف لاحقاً:</strong> توسعات جلسات مشاركة الموقع والمهارات والتوفر والمواعيد اللازمة لـStage6؛ هذه لا تجعل تصميم Stage2 الأصلي ناقصاً.</p>
+<h2>7. Stage 3 — المصادقة والصلاحيات</h2>
+<p><strong>الحالة: مكتملة ضمن نطاق الطلب الأصلي.</strong></p>
+<ul>
+<li>التسجيل والدخول والخروج وCurrent User.</li>
+<li>تجزئة كلمات المرور باستخدام Argon2.</li>
+<li>Access Tokens وجلسات Refresh Tokens مع rotation وrevocation وكشف إعادة الاستخدام.</li>
+<li>JWT Strategy وGuards وDecorators وDTO validation وSwagger authentication.</li>
+<li>صلاحيات الأدوار وملكية الموارد وعزل المؤسسات واختبارات رفض الوصول.</li>
+</ul>
+<p>Access Token محفوظ في ذاكرة العميل، وRefresh Token في HttpOnly cookie؛ لا تُحفظ كلمات المرور أوالتوكنات في localStorage.</p>
+<p><strong>غير منفذ كميزات حساب متقدمة:</strong> Password Reset وMFA وEmail Verification. ولا توجد واجهة Profile/Settings كاملة لتغيير بيانات الحساب وكلمة المرور؛ هذه ضمن الأعمال المتبقية للواجهة مع Backend اللازم لها.</p>
+<h2>8. Stage 4 — الواجهة وتجربة الاستخدام</h2>
+<p><strong>الحالة: مكتملة جزئياً؛ ليست الصفحات الاثنتا عشرة كلها مكتملة.</strong></p>
+<p>الموجود: Design system، هوية بنفسجي/أخضر، Typography، Shell وتنقل، Login/Registration، Overview مشتركة تتكيف مع الدور، قوائم وتفاصيل الأعمال، Responsive layouts، Light/Dark، وحالات تحميل وفراغ وأخطاء. البيانات التجريبية معزولة، وAPI هو الوضع الافتراضي.</p>
+<h3>مراجعة الواجهات الاثنتي عشرة</h3>
+<table>
+<thead>
+<tr>
+<th>الواجهة المطلوبة</th>
+<th>الحالة الفعلية</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Login وRegistration</td>
+<td>منفذتان ومربوطتان بالمصادقة</td>
+</tr>
+<tr>
+<td>Admin Dashboard</td>
+<td>Overview حسب الدور وتقارير فعلية؛ ليست لوحة إدارة شاملة لكل المستخدمين والفرق والإعدادات</td>
+</tr>
+<tr>
+<td>Dispatcher Dashboard</td>
+<td>Overview وواجهات دورة العمل والتعيين اليدوي؛ الخريطة والتوصيات الذكية ناقصتان</td>
+</tr>
+<tr>
+<td>Technician Dashboard</td>
+<td>Overview وأعمال مصرح بها وواجهات القبول والتنفيذ والصور؛ مشاركة الموقع غير مفعّلة</td>
+</tr>
+<tr>
+<td>Customer Portal</td>
+<td>إنشاء الطلبات ومتابعة التفاصيل والحالة والأعمال المرتبطة بها</td>
+</tr>
+<tr>
+<td>Work Order Management</td>
+<td>دورة العمل الأساسية والبحث والفلاتر وتفاصيل الأعمال</td>
+</tr>
+<tr>
+<td>Maintenance Request Details</td>
+<td>منفذة مع المراجعة والإلغاء وإنشاء WorkOrder حسب الصلاحية</td>
+</tr>
+<tr>
+<td>Technician Assignment Interface</td>
+<td>تعيين وإعادة تعيين يدويان؛ Smart Dispatch والجدولة المتقدمة غير منفذين</td>
+</tr>
+<tr>
+<td>Live Tracking Map</td>
+<td>غير منفذة</td>
+</tr>
+<tr>
+<td>Notifications Center</td>
+<td>إشعارات التعيين وقائمة وتعليم مقروء؛ عداد غير المقروء وتغطية تغيّر الحالات ناقصان</td>
+</tr>
+<tr>
+<td>Analytics and Reports</td>
+<td>واجهة فعلية ومؤشرات من قاعدة البيانات؛ تعريفات وحدود المؤشرات موضحة أدناه</td>
+</tr>
+<tr>
+<td>Profile and Settings</td>
+<td>الثيم والقائمة الحسابية موجودان؛ الإدارة المتقدمة للملف والحساب والمؤسسة غير مكتملة</td>
+</tr>
+</tbody></table>
+<h3>ما يلزم لإغلاق Stage 4</h3>
+<ol>
+<li>واجهات إدارة المستخدمين وعضويات المؤسسة والأدوار وحالاتها.</li>
+<li>واجهات إدارة الفرق وعضوياتها.</li>
+<li>Profile/Settings مع حفظ فعلي وآمن، بما فيه تغيير كلمة المرور عند تنفيذه.</li>
+<li>ربط الخريطة وتوصيات الفنيين بعد اكتمال Backend الخاص بها.</li>
+<li>استكمال مركز الإشعارات وعداد غير المقروء.</li>
+<li>مراجعة جميع الواجهات مع أدوار فعلية واختبارات وصولية ومتصفح ومقاسات مختلفة.</li>
+</ol>
+<p>الواجهات تعتمد على صلاحيات Backend؛ لا يكفي إضافة أزرار أوصفحات شكلية لإعلان المرحلة مكتملة.</p>
+<h2>9. Stage 5 — دورة الصيانة الأساسية</h2>
+<p><strong>الحالة: مكتملة ضمن نطاقها.</strong></p>
+<pre><code class="language-text">Maintenance Request -&gt; Review -&gt; Work Order -&gt; Assignment
+                    -&gt; Accept -&gt; In Progress -&gt; Completed
+                    -&gt; Verified -&gt; Closed
+</code></pre>
+<p>أُنجز إنشاء الطلب ومراجعته، وإنشاء أمر العمل، والتعيين وإعادة التعيين، وقبول الفني وبدء العمل، وصور Before/After، وملاحظات التقدم والإكمال، والتحقق والإغلاق وحفظ السجل.</p>
+<ul>
+<li>الانتقالات تُفحص على الخادم، مع version لمنع الكتابة على حالة قديمة.</li>
+<li>Serializable transactions وقيود قاعدة البيانات تحمي من التعيين النشط المكرر والتحديثات المتزامنة.</li>
+<li>إعادة التعيين تنهي التكليف السابق وتحفظ تاريخه، وتحتاج قبولاً وصوراً للتكليف الجديد.</li>
+<li>الإلغاء يحتاج سبباً ويفحص وضع الطلب والأعمال المرتبطة به.</li>
+<li>الصور خاصة، تُفحص وتُعاد صياغتها WebP، ولا تُعرض عبر public URLs.</li>
+<li>Socket.IO مصادق عليه، وOutbox محفوظ مع تغييرات العمل، مع مزامنة عند إعادة الاتصال.</li>
+</ul>
+<p>هذه مرحلة دورة العمل الأساسية؛ منع تعارض المواعيد بين مهام مختلفة وGPS وSmart Dispatch ليست مكتملة فيها.</p>
+<h2>10. Stage 6 — القدرات المتقدمة</h2>
+<p><strong>الحالة: مكتملة جزئياً.</strong></p>
+<table>
+<thead>
+<tr>
+<th>الوحدة</th>
+<th>أُنجز</th>
+<th>بقي</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Technician Location Tracking</td>
+<td>مكوّن موافقة وإيقاف مشاركة في العميل، مع اختبارات</td>
+<td>Backend للجلسات وexpiry والصلاحيات، التكامل مع دورة العمل، Leaflet/OpenStreetMap map، والتفعيل واختبارات التكامل</td>
+</tr>
+<tr>
+<td>Smart Dispatch</td>
+<td>التعيين اليدوي الأساسي موجود منStage5</td>
+<td>المهارات والتوفر والجدولة، شرح النقاط، المسافة المصرح بها، override مدقق، ومنع التعارض المتزامن</td>
+</tr>
+<tr>
+<td>Photo Management</td>
+<td>رفع خاص Before/After، فحص نوع وحجم، ارتباط بالتكليف، وعرض مصرح</td>
+<td>مراجعة إغلاق متطلبات Stage6 وتغطية تاريخ المرفقات والصلاحيات كاملة</td>
+</tr>
+<tr>
+<td>Notifications</td>
+<td>إشعارات التعيين الفورية، حفظ فيDB، وتعليم مقروء</td>
+<td>عداد غير المقروء الكامل وإشعارات تغيّر الحالات والتغطية الشاملة للمتلقين</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>endpoints وواجهة فعلية للنتائج والعبء والتأخر والاتجاهات</td>
+<td>مواءمة تعريف التأخر مع الجدولة المتقدمة عند تنفيذها ومراجعة ختامية للمتطلبات</td>
+</tr>
+<tr>
+<td>Audit Logging</td>
+<td>سجل محمي وواجهة Admin مع فلاتر وpagination</td>
+<td>تسجيل أحداث Tracking وSmart Dispatch وبقية الميزات حين تُنفّذ</td>
+</tr>
+</tbody></table>
+<h3>حالة مشاركة الموقع بدقة</h3>
+<p>وجود ملفات LocationSharing وSharingController لا يعني جمع مواقع المستخدمين. المكوّن غير مربوط بالصفحات، وTracking Backend والخريطة غير منفذين. النسخة المفحوصة لا توفر Live GPS tracking عاملاً.</p>
+<p>قبل التفعيل يجب ربط الموافقة بجلسة مصادق عليها وتكليف نشط، وإنهاء المشاركة عند سحب الموافقة أوانتهاء العمل أوإعادة التعيين أوإبطال الجلسة، مع صلاحيات الخادم ومدة صلاحية وحذف أوتقليل الاحتفاظ بالإحداثيات. لا تُستخدم إحداثيات تجريبية لإظهار ميزة غير موجودة كأنها عاملة.</p>
+<h3>تعريفات Analytics الحالية</h3>
+<table>
+<thead>
+<tr>
+<th>المؤشر</th>
+<th>التعريف الفعلي</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Completed</td>
+<td>أعمال يقع completedAt لها ضمن الفترة المختارة</td>
+</tr>
+<tr>
+<td>Closed</td>
+<td>أعمال يقع closedAt لها ضمن الفترة</td>
+</tr>
+<tr>
+<td>Average resolution time</td>
+<td>متوسط الزمن من إنشاء WorkOrder حتى إغلاقه، للأعمال المغلقة ضمن الفترة</td>
+</tr>
+<tr>
+<td>Technician workload</td>
+<td>عدد التكليفات ACTIVE حالياً، حتى100 فني، مستقل عن الفترة</td>
+</tr>
+<tr>
+<td>Overdue</td>
+<td>أعمال غير منتهية تجاوز scheduledAt لها الآن؛ تأخر عن موعد البدء وليس SLA أوموعد نهاية</td>
+</tr>
+<tr>
+<td>Performance trend</td>
+<td>عدد الإكمالات اليومي حسبUTC؛ الأيام دون إكمال لا تظهر كسجلات</td>
+</tr>
+</tbody></table>
+<p>الفترة نصف مفتوحة: from مشمول وto غير مشمول. الافتراضي آخر30 يوماً، والحد الأعلى366 يوماً. الحسابات داخل قاعدة البيانات ومقيّدة بالمؤسسة.</p>
+<h2>11. خطة الإكمال وعدد المراحل المتبقية</h2>
+<p><strong>بقي إغلاق مرحلتين من أصل ست: Stage6 ثم بقية Stage4 التي تعتمد عليها.</strong> توجد بينهما ميزات مشتركة؛ إنهاء الخريطة مثلاً يخدم متطلبات المرحلتين ولا يمثل مشروعين منفصلين.</p>
+<table>
+<thead>
+<tr>
+<th>الترتيب المقترح</th>
+<th>الدفعة</th>
+<th>النتيجة المطلوبة</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Tracking end-to-end</td>
+<td>Backend محمي، موافقة، توقف فعلي، خريطة ومواقع قديمة واضحة</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Smart Dispatch والجدولة</td>
+<td>مهارات وتوفر، توصيات مفسرة، ومنع تعارض المواعيد</td>
+</tr>
+<tr>
+<td>3</td>
+<td>الإشعارات والصور والتدقيق</td>
+<td>استكمال العدادات وتغيّر الحالات وتاريخ الصور وأحداث الميزات الجديدة</td>
+</tr>
+<tr>
+<td>4</td>
+<td>مراجعة Analytics وStage6</td>
+<td>توحيد التعريفات مع الجدولة واختبارات قبول كاملة</td>
+</tr>
+<tr>
+<td>5</td>
+<td>إدارة المستخدمين والفرق والحساب</td>
+<td>إغلاق واجهات الإدارة وProfile/Settings فيStage4</td>
+</tr>
+<tr>
+<td>6</td>
+<td>مراجعة الواجهات الاثنتي عشرة</td>
+<td>وظائف حقيقية وصلاحيات وحالات تحميل وأخطاء ومتصفح وصور فعلية</td>
+</tr>
+</tbody></table>
+<p>هذه ست دفعات عمل مقترحة لإغلاق المرحلتين المتبقيتين، وليست ست مراحل جديدة. لم تُحدَّد مدة أوتكلفة أوتاريخ إنجاز، لذلك لا يعطي التقرير تقديراً زمنياً أونسبة إنجاز رقمية غير مقاسة.</p>
+<h2>12. الاختبارات والأدلة المسجلة</h2>
+<p>آخر نتائج تنفيذ مسجلة للنسخة البرمجية المرجعية:</p>
+<table>
+<thead>
+<tr>
+<th>التحقق</th>
+<th>النتيجة المسجلة</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TypeScript typecheck</td>
+<td>ناجح للتطبيقين</td>
+</tr>
+<tr>
+<td>Production build</td>
+<td>ناجح للتطبيقين</td>
+</tr>
+<tr>
+<td>الاختبارات العادية</td>
+<td>28 اختباراً ناجحاً</td>
+</tr>
+<tr>
+<td>PostgreSQL integration tests</td>
+<td>49 اختباراً ناجحاً</td>
+</tr>
+<tr>
+<td>API browser tests</td>
+<td>اختباران ناجحان، أحدهما يتضمن فتح Analytics وAudit</td>
+</tr>
+</tbody></table>
+<p>هذه نتائج سابقة موثقة أثناء التنفيذ، ولم تُعد هذه المجموعة عند كتابة هذا التقرير الوثائقي. لا تعني الاختبارات نجاح Tracking أوSmart Dispatch؛ هاتان الميزتان غير منفذتين أصلاً. ولا تعني اختبارات المتصفح تغطية كل الواجهات والمقاسات والإجراءات الممكنة.</p>
+<h3>أبرز المراجع البرمجية</h3>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>التغيير</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>db94d79</td>
+<td>دورة الصيانة وعملياتها وصورها والتحديثات الفورية</td>
+</tr>
+<tr>
+<td>78a1745</td>
+<td>أساس موافقة مشاركة الموقع في العميل، دون تفعيل</td>
+</tr>
+<tr>
+<td>54c5b64</td>
+<td>Analytics وAudit querying مع صلاحيات المؤسسة</td>
+</tr>
+<tr>
+<td>628048c</td>
+<td>واجهات Analytics وAudit واختبارات متصفح موسعة</td>
+</tr>
+</tbody></table>
+<h2>13. الأمان والخصوصية والأداء وحدود الإنتاج</h2>
+<ul>
+<li>عزل المؤسسات يجمع JWT والعضوية الحالية وصلاحيات المورد وPostgreSQL RLS وComposite Foreign Keys.</li>
+<li>الصور الخاصة محفوظة حالياً كبيانات فيDB؛ Private Object Storage ليس منفذاً. التوسع يحتاج سياسة احتفاظ ونسخ احتياطي مناسبة.</li>
+<li>Audit viewer يعرض الفاعل والفعل والوقت والمورد، ولا يعرض metadata الحساسة.</li>
+<li>التشغيل الفوري الحالي يدعم API instance واحدة. تعدد العقد يحتاج shared Socket.IO adapter وتصميم توزيع أحداث مناسب؛ SKIP LOCKED وحده لا يوزع البث على كل العقد.</li>
+<li>بعض القوائم الحالية حتى100 سجل، وpagination الخاصة بها محلية. سجل التدقيق يمتلك pagination من الخادم بحدود محددة.</li>
+<li>آخر فحص dependencies مسجّل سابقاً أظهر14 تنبيهاً:13 high و1 moderate. لم يُعد الفحص عند إعداد التقرير؛ لا يُقدَّم هذا الرقم كفحص أمني حي.</li>
+<li>CI/CD وobservability واختبارات الضغط وخطة backup/restore ومراجعة النشر الشاملة ليست منجزات مثبتة هنا.</li>
+</ul>
+<p><strong>اكتمال مرحلة وظيفية لا يساوي إعلان جاهزية Production.</strong></p>
+<h2>14. التشغيل المحلي</h2>
+<p>المتطلبات: Node.js24 وnpm وDocker Engine وDocker Compose.</p>
+<h3>الإعداد لأول مرة</h3>
+<pre><code class="language-bash">cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+npm ci
+npm run auth:configure-local -w @fieldops/api
+docker compose up -d --wait
+npm run db:generate
+npm exec -w @fieldops/api -- prisma migrate deploy
+npm run dev
+</code></pre>
+<p>لا تستبدل ملفات .env الموجودة عند تحديث بيئة سبق إعدادها، ولا ترفع الأسرار إلىGit. إعدادات المثال للتطوير فقط. يقرأ كل تطبيق إعداداته من workspace الخاص به، ويجب أن يطابق WEB_ORIGIN عنوان المتصفح الفعلي.</p>
+<h3>الفحص وPrisma Studio</h3>
+<pre><code class="language-bash">npm run typecheck
+npm test
+npm run build
+npm run db:studio -w @fieldops/api
+</code></pre>
+<p>اختبارات التكامل والمتصفح تحتاج TEST_DATABASE_URL لقاعدة مستقلة ينتهي اسمها بـ_test. لا تستخدم قاعدة التطوير لهذه الاختبارات. Studio أداة owner محلية لفحص البيانات، وليس بوابة آمنة لعملاء المؤسسات.</p>
+<h2>15. استخدام الستايل المرفق وتصدير التقرير</h2>
+<p>ملف Markdown هذا يحتوي CSS المرفق داخل style block، مع تعديلات اتجاه للعربية: RTL للنص والجداول، وLTR للأكواد. حُفظت العناوين الزرقاء والجداول وخلفيات الأكواد حسب الملف المرفق. النسخة المصاحبة markdown-pdf.css تحمل نفس التنسيق مع إضافات العربية.</p>
+<p>التنسيق يتطلب عارض Markdown يسمح بـHTML وCSS أوأداة تصدير تدعم ذلك. GitHub وبعض العوارض تتجاهل style blocks؛ هذا سلوك العارض ولا يعني فقدان محتوى الملف. عند استعمال إضافة Markdown PDF يمكن اختيار CSS المصاحب في إعداد markdown-pdf.styles وتعطيل الستايل الافتراضي إذا غيّر المظهر.</p>
+<p>التقرير مبني على طلبات المستخدم وحالة الكود والوثائق الأحدث؛ التعليقات الموجودة داخل CSS استُخدمت كمرجع تنسيق فقط، وليست تعليمات عمل أوتغيير في نطاق المشروع.</p>
+
+</body></html>
