@@ -77,6 +77,11 @@ model Organization {
   history         WorkOrderStatusHistory[]
   locations       TechnicianLocationUpdate[]
   trackingSessions TrackingSession[]
+  technicianAvailability TechnicianAvailability[]
+  technicianTimeOff TechnicianTimeOff[]
+  skills Skill[]
+  technicianSkills TechnicianSkill[]
+  workOrderSkills WorkOrderSkill[]
   attachments     Attachment[]
   notifications   Notification[]
   auditLogs       AuditLog[]
@@ -148,6 +153,10 @@ model TechnicianProfile {
   membership     Membership                 @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Restrict)
   assignments    Assignment[]
   trackingSessions TrackingSession[]
+  availability TechnicianAvailability?
+  timeOff TechnicianTimeOff[]
+  skills TechnicianSkill[]
+  timeZone String @default("UTC") @db.VarChar(64)
   locations      TechnicianLocationUpdate[]
 
   @@unique([organizationId, id])
@@ -253,6 +262,9 @@ model WorkOrder {
   team               Team?                    @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Restrict)
   assignments        Assignment[]
   trackingSessions   TrackingSession[]
+  requiredSkills    WorkOrderSkill[]
+  plannedEndAt      DateTime?
+  estimatedDurationMinutes Int?
   statusHistory      WorkOrderStatusHistory[]
   attachments        Attachment[]
 
@@ -281,6 +293,8 @@ model Assignment {
   technician      TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
   assignedBy      Membership        @relation("AssignedBy", fields: [organizationId, assignedById], references: [organizationId, id], onDelete: Restrict)
   trackingSessions TrackingSession[]
+  windowStartAt DateTime?
+  windowEndAt DateTime?
 
   @@unique([organizationId, id])
   @@unique([organizationId, id, workOrderId], map: "Assignment_order_identity")
@@ -479,4 +493,72 @@ model OutboxEvent {
 
   @@index([publishedAt, createdAt])
   @@index([organizationId, aggregateType, aggregateId])
+}
+
+
+enum TechnicianAvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  OFF_DUTY
+}
+
+model TechnicianAvailability {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  technicianId String @unique @db.Uuid
+  status TechnicianAvailabilityStatus @default(AVAILABLE)
+  weeklyHours Json @default("[]")
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  technician TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  @@unique([organizationId, technicianId])
+  @@index([organizationId, status])
+}
+
+model TechnicianTimeOff {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  technicianId String @db.Uuid
+  startAt DateTime
+  endAt DateTime
+  reason String? @db.VarChar(200)
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  technician TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  @@unique([organizationId, id])
+  @@index([organizationId, technicianId, startAt, endAt])
+}
+
+model Skill {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name String @db.VarChar(80)
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  technicians TechnicianSkill[]
+  workOrders WorkOrderSkill[]
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+}
+
+model TechnicianSkill {
+  organizationId String @db.Uuid
+  technicianId String @db.Uuid
+  skillId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  technician TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  skill Skill @relation(fields: [organizationId, skillId], references: [organizationId, id], onDelete: Restrict)
+  @@id([organizationId, technicianId, skillId])
+  @@index([organizationId, skillId])
+}
+
+model WorkOrderSkill {
+  organizationId String @db.Uuid
+  workOrderId String @db.Uuid
+  skillId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder WorkOrder @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  skill Skill @relation(fields: [organizationId, skillId], references: [organizationId, id], onDelete: Restrict)
+  @@id([organizationId, workOrderId, skillId])
+  @@index([organizationId, skillId])
 }
