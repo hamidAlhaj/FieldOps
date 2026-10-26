@@ -327,6 +327,7 @@ model TrackingSession {
   id             String             @id @default(uuid()) @db.Uuid
   organizationId String             @db.Uuid
   assignmentId   String             @db.Uuid
+  authSessionId  String?            @db.Uuid
   workOrderId    String             @db.Uuid
   technicianId   String             @db.Uuid
   consentedAt    DateTime           @default(now())
@@ -338,6 +339,7 @@ model TrackingSession {
   recordedAt     DateTime?
   receivedAt     DateTime?
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  authSession    AuthSession?       @relation(fields: [authSessionId], references: [id], onDelete: Restrict)
   assignment     Assignment         @relation(fields: [organizationId, assignmentId, workOrderId, technicianId], references: [organizationId, id, workOrderId, technicianId], onDelete: Restrict, onUpdate: NoAction, map: "TrackingSession_assignment_fkey")
   workOrder      WorkOrder          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict, map: "TrackingSession_workOrder_fkey")
   technician     TechnicianProfile  @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict, map: "TrackingSession_technician_fkey")
@@ -346,6 +348,7 @@ model TrackingSession {
   @@index([organizationId, technicianId, endedAt])
   @@index([organizationId, workOrderId, endedAt])
   @@index([expiresAt, endedAt])
+  @@index([authSessionId, endedAt])
 }
 
 model Attachment {
@@ -416,6 +419,7 @@ model AuthSession {
   updatedAt     DateTime       @updatedAt
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  trackingSessions TrackingSession[]
 
   @@index([userId, revokedAt])
 }
