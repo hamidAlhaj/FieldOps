@@ -34,15 +34,18 @@ BEGIN
   THEN RETURN FALSE;
   END IF;
 
-  PERFORM a.id
-  FROM public."AuthSession" a
-  JOIN public."User" u ON u.id = a."userId"
-  WHERE a.id = session_id AND a."userId" = actor_id
-    AND a."revokedAt" IS NULL
-    AND a."expiresAt" > clock_timestamp()
-    AND u."isActive"
-  FOR SHARE OF a;
+  -- Match the existing password-change lock order (User then AuthSession).
+  -- This also serializes an account disable with a new tracking lease.
+  PERFORM u.id FROM public."User" u
+    WHERE u.id = actor_id AND u."isActive"
+    FOR SHARE;
+  IF NOT FOUND THEN RETURN FALSE; END IF;
 
+  PERFORM a.id FROM public."AuthSession" a
+    WHERE a.id = session_id AND a."userId" = actor_id
+      AND a."revokedAt" IS NULL
+      AND a."expiresAt" > clock_timestamp()
+    FOR SHARE;
   RETURN FOUND;
 END $$;
 REVOKE ALL ON FUNCTION public.fieldops_tracking_session_authorized(uuid,uuid) FROM PUBLIC;
