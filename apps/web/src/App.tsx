@@ -1,6 +1,7 @@
 import { Administration } from "./features/administration/Administration";
 import { Profile } from "./features/administration/Profile";
 import { Reports } from "./features/reporting/Reports";
+import { TrackingPage } from "./features/tracking/TrackingPage";
 import {
   Requests,
   RequestDetails,
@@ -31,10 +32,12 @@ let restoration: Promise<User | null> | undefined;
 function Protected({
   customerOnly = false,
   ordersOnly = false,
+  staffOnly = false,
   children,
 }: {
   customerOnly?: boolean;
   ordersOnly?: boolean;
+  staffOnly?: boolean;
   children: React.ReactNode;
 }) {
   const user = useSession((s) => s.user);
@@ -42,7 +45,8 @@ function Protected({
   if (!user) return <Navigate to="/login" replace />;
   if (
     (customerOnly && role !== "CUSTOMER") ||
-    (ordersOnly && (!role || role === "CUSTOMER"))
+    (ordersOnly && (!role || role === "CUSTOMER")) ||
+    (staffOnly && (isDemo || (role !== "ADMIN" && role !== "DISPATCHER")))
   )
     return <Navigate to="/" replace />;
   return children;
@@ -50,7 +54,7 @@ function Protected({
 function RouteFocus() {
   const location = useLocation();
   useEffect(() => {
-    document.title = `${location.pathname === "/login" ? "Sign in" : location.pathname === "/register" ? "Create account" : location.pathname === "/" ? "Overview" : "Operations"} · FieldOps`;
+    document.title = `${location.pathname === "/login" ? "Sign in" : location.pathname === "/register" ? "Create account" : location.pathname === "/" ? "Overview" : location.pathname === "/tracking" ? "Live tracking" : "Operations"} · FieldOps`;
     document.getElementById("main-content")?.focus();
     window.scrollTo(0, 0);
   }, [location.pathname]);
@@ -129,6 +133,7 @@ function Application() {
           <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Reports />} />
           <Route path="audit-logs" element={<Reports audit />} />
+          <Route path="tracking" element={<Protected staffOnly><TrackingPage /></Protected>} />
           <Route
             path="work-orders"
             element={
