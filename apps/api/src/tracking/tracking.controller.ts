@@ -28,7 +28,7 @@ export class TrackingController {
   @Header("Cache-Control", "private, no-store")
   @Post("sessions")
   @Roles("TECHNICIAN")
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   start(@Req() r: AuthRequest, @Body() dto: StartTrackingDto) {
     return this.service.start(this.context(r), dto);
   }
