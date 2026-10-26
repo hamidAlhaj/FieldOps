@@ -29,6 +29,34 @@ test("real registration, session restoration, error recovery and logout against 
   await expect(
     page.getByRole("heading", { name: "A fresh start" }),
   ).toBeVisible();
+  await page.goto("/administration");
+  await expect(
+    page.getByRole("heading", { name: "People & teams" }),
+  ).toBeVisible();
+  await page.getByLabel("New team name").fill("Browser operations team");
+  await page.getByRole("button", { name: "Create team", exact: true }).click();
+  await expect(page.getByLabel("Team name", { exact: true })).toHaveValue(
+    "Browser operations team",
+  );
+  await page.screenshot({
+    path: "/tmp/fieldops-stage4-administration.png",
+    fullPage: true,
+  });
+  await page.goto("/profile");
+  await expect(
+    page.getByRole("heading", { name: "Profile & settings", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Display name").fill("Updated Browser Manager");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Display name")).toHaveValue(
+    "Updated Browser Manager",
+  );
+  await page.screenshot({
+    path: "/tmp/fieldops-stage4-profile.png",
+    fullPage: true,
+  });
   await page.goto("/analytics");
   await expect(
     page.getByRole("heading", { name: "Analytics & reports", exact: true }),

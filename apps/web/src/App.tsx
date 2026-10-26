@@ -1,3 +1,5 @@
+import { Administration } from "./features/administration/Administration";
+import { Profile } from "./features/administration/Profile";
 import { Reports } from "./features/reporting/Reports";
 import {
   Requests,
@@ -123,6 +125,8 @@ function Application() {
           }
         >
           <Route index element={<Overview />} />
+          <Route path="administration" element={<Administration />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Reports />} />
           <Route path="audit-logs" element={<Reports audit />} />
           <Route

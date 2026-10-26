@@ -1,9 +1,11 @@
+import { http } from "../services/http";
+import { z } from "zod";
 import { useRealtime } from "../features/workflow/useRealtime";
 import { Notifications } from "../features/workflow/Notifications";
 import { demoNotifications } from "../services/mocks/data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -80,6 +82,18 @@ function Sidebar({ close }: { close?: () => void }) {
             Audit log
           </NavLink>
         )}
+        {!isDemo && membership?.role.name === "ADMIN" && (
+          <NavLink to="/administration" onClick={close}>
+            <Users size={19} />
+            People & teams
+          </NavLink>
+        )}
+        {!isDemo && (
+          <NavLink to="/profile" onClick={close}>
+            <Settings2 size={19} />
+            Profile & settings
+          </NavLink>
+        )}
       </nav>
       <p className="nav-label future-label">COMING NEXT</p>
       <div className="future-nav" aria-label="Planned modules">
@@ -90,11 +104,6 @@ function Sidebar({ close }: { close?: () => void }) {
         <span>
           <MapPin size={18} />
           Live tracking
-        </span>
-
-        <span>
-          <Settings2 size={18} />
-          Workspace settings
         </span>
       </div>
       <div className="sidebar-bottom">
@@ -121,6 +130,8 @@ export function AppShell() {
   const [notifications, setNotifications] = useState(false);
   const [help, setHelp] = useState(false);
   const { user, organizationId, selectOrganization } = useSession();
+  const savedProfile = useQuery({ queryKey: ["profile", user?.id], enabled: !isDemo && !!user, queryFn: () => http("/auth/profile", z.object({theme:z.enum(["light","dark"])})) });
+  useEffect(() => { if(savedProfile.data) useUi.setState({theme:savedProfile.data.theme}); }, [savedProfile.data?.theme]);
   const membership = useMembership();
   const { theme, toggleTheme, notify } = useUi();
   const query = useQueryClient();
