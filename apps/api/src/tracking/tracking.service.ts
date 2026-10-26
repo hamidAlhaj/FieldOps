@@ -337,19 +337,20 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
       ) throw new ForbiddenException();
 
       const now = new Date();
+      // AuthSession is intentionally unreadable by fieldops_app.
+      // The SECURITY DEFINER helper verifies each session in the current tenant.
+      const authorizedIds = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "TrackingSession"
+        WHERE "organizationId"=${c.organizationId}::uuid
+          AND "endedAt" IS NULL AND "expiresAt" > ${now}
+          AND public.fieldops_tracking_auth_is_active(id)
+      `;
       const sessions = await tx.trackingSession.findMany({
         where: {
           organizationId: c.organizationId,
+          id: { in: authorizedIds.map((row) => row.id) },
           endedAt: null,
           expiresAt: { gt: now },
-          authSessionId: { not: null },
-          authSession: {
-            is: {
-              revokedAt: null,
-              expiresAt: { gt: now },
-              user: { isActive: true },
-            },
-          },
           assignment: {
             status: "ACTIVE",
             acceptedAt: { not: null },
