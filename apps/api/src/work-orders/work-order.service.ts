@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { Prisma, RoleName, WorkOrderStatus } from "@prisma/client";
 import { event, notify } from "../realtime/events";
+import { SchedulingService } from "../scheduling/scheduling.service";
 import { OrganizationContext, PrismaService } from "../prisma/prisma.service";
 
 const next: Record<WorkOrderStatus, WorkOrderStatus[]> = {
@@ -20,7 +21,7 @@ const next: Record<WorkOrderStatus, WorkOrderStatus[]> = {
 };
 @Injectable()
 export class WorkOrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService) {}
   private async actor(
     tx: Prisma.TransactionClient,
     context: OrganizationContext,
@@ -187,6 +188,11 @@ export class WorkOrderService {
       });
       if (updated.count !== 1)
         throw new ConflictException("Stale work order version");
+      await this.scheduling.lockTechnician(tx, context, technicianId);
+      await this.scheduling.assertAssignable(
+        tx, context, technicianId, order.plannedEndAt ? order.scheduledAt : null,
+        order.plannedEndAt, orderId,
+      );
       await tx.assignment.updateMany({
         where: { workOrderId: orderId, status: "ACTIVE" },
         data: { status: "REASSIGNED", endedAt: new Date(), reason },
