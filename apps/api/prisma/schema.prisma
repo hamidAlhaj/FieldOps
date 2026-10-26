@@ -76,6 +76,7 @@ model Organization {
   assignments     Assignment[]
   history         WorkOrderStatusHistory[]
   locations       TechnicianLocationUpdate[]
+  trackingSessions TrackingSession[]
   attachments     Attachment[]
   notifications   Notification[]
   auditLogs       AuditLog[]
@@ -146,6 +147,7 @@ model TechnicianProfile {
   organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   membership     Membership                 @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Restrict)
   assignments    Assignment[]
+  trackingSessions TrackingSession[]
   locations      TechnicianLocationUpdate[]
 
   @@unique([organizationId, id])
@@ -250,6 +252,7 @@ model WorkOrder {
   request            MaintenanceRequest       @relation(fields: [organizationId, requestId], references: [organizationId, id], onDelete: Restrict)
   team               Team?                    @relation(fields: [organizationId, teamId], references: [organizationId, id], onDelete: Restrict)
   assignments        Assignment[]
+  trackingSessions   TrackingSession[]
   statusHistory      WorkOrderStatusHistory[]
   attachments        Attachment[]
 
@@ -277,9 +280,11 @@ model Assignment {
   workOrder       WorkOrder         @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
   technician      TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
   assignedBy      Membership        @relation("AssignedBy", fields: [organizationId, assignedById], references: [organizationId, id], onDelete: Restrict)
+  trackingSessions TrackingSession[]
 
   @@unique([organizationId, id])
   @@unique([organizationId, id, workOrderId], map: "Assignment_order_identity")
+  @@unique([organizationId, id, workOrderId, technicianId], map: "Assignment_tracking_identity")
   @@index([organizationId, workOrderId, createdAt])
   @@index([organizationId, technicianId, status])
   @@index([organizationId, assignedById])
@@ -315,6 +320,32 @@ model TechnicianLocationUpdate {
   technician     TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
 
   @@index([organizationId, technicianId, recordedAt(sort: Desc)])
+}
+
+
+model TrackingSession {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  assignmentId   String             @db.Uuid
+  workOrderId    String             @db.Uuid
+  technicianId   String             @db.Uuid
+  consentedAt    DateTime           @default(now())
+  expiresAt      DateTime
+  endedAt        DateTime?
+  latitude       Float?
+  longitude      Float?
+  accuracyMeters Float?
+  recordedAt     DateTime?
+  receivedAt     DateTime?
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  assignment     Assignment         @relation(fields: [organizationId, assignmentId, workOrderId, technicianId], references: [organizationId, id, workOrderId, technicianId], onDelete: Restrict, onUpdate: NoAction)
+  workOrder      WorkOrder          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  technician     TechnicianProfile  @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, technicianId, endedAt])
+  @@index([organizationId, workOrderId, endedAt])
+  @@index([expiresAt, endedAt])
 }
 
 model Attachment {
