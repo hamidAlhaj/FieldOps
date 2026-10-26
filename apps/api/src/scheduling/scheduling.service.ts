@@ -90,10 +90,11 @@ export class SchedulingService {
   },now:Date){
     const busy=t.assignments?.some(a=>a.workOrder.status==="IN_PROGRESS"||
       (!!a.workOrder.scheduledAt&&!!a.workOrder.plannedEndAt&&a.workOrder.scheduledAt<=now&&a.workOrder.plannedEndAt>now));
+    const currentlyOff=t.timeOff?.some(t=>t.startAt<=now&&t.endAt>now);
     return {
       id:t.id,employeeCode:t.employeeCode,name:t.membership?.user.displayName??"",
       timeZone:t.timeZone,
-      status:busy?"BUSY":t.availability?.status??"AVAILABLE",
+      status:busy?"BUSY":currentlyOff?"OFF_DUTY":t.availability?.status??"AVAILABLE",
       declaredStatus:t.availability?.status??"AVAILABLE",
       weeklyHours:t.availability?.weeklyHours??[],
       timeOff:t.timeOff??[],skills:t.skills?.map(s=>s.skill)??[],
@@ -136,6 +137,7 @@ export class SchedulingService {
       create:{organizationId:c.organizationId,technicianId:id,status:dto.status,weeklyHours:weekly as unknown as Prisma.InputJsonValue},
       update:{status:dto.status,weeklyHours:weekly as unknown as Prisma.InputJsonValue},
     });
+    await event(tx,c.organizationId,"TechnicianProfile",id,"technician.availability.changed");
     return {id,status:dto.status,timeZone:zone,weeklyHours:weekly};
   }
   async availability(c:OrganizationContext,id:string,dto:AvailabilityDto,admin:boolean){
@@ -162,7 +164,9 @@ export class SchedulingService {
       const overlap=await tx.assignment.count({where:{organizationId:c.organizationId,technicianId,status:"ACTIVE",
         windowStartAt:{lt:end},windowEndAt:{gt:start}}});
       if(overlap)throw new ConflictException("Time off overlaps an assigned work order");
-      return tx.technicianTimeOff.create({data:{organizationId:c.organizationId,technicianId,startAt:start,endAt:end,reason:dto.reason?.trim()}});
+      const row=await tx.technicianTimeOff.create({data:{organizationId:c.organizationId,technicianId,startAt:start,endAt:end,reason:dto.reason?.trim()}});
+      await event(tx,c.organizationId,"TechnicianProfile",technicianId,"technician.time-off.changed");
+      return row;
     });
   }
   async removeTimeOff(c:OrganizationContext,id:string,admin:boolean){
@@ -176,6 +180,7 @@ export class SchedulingService {
       }
       await this.lockTechnician(tx,c,row.technicianId);
       await tx.technicianTimeOff.delete({where:{id}});
+      await event(tx,c.organizationId,"TechnicianProfile",row.technicianId,"technician.time-off.changed");
     });
   }
   async skills(c:OrganizationContext){
@@ -191,7 +196,9 @@ export class SchedulingService {
       if(name.length<2)throw new BadRequestException("Skill name required");
       const exists=await tx.skill.findFirst({where:{organizationId:c.organizationId,name:{equals:name,mode:"insensitive"}}});
       if(exists)throw new ConflictException("Skill already exists");
-      return tx.skill.create({data:{organizationId:c.organizationId,name}});
+      const created=await tx.skill.create({data:{organizationId:c.organizationId,name}});
+      await event(tx,c.organizationId,"Skill",created.id,"skill.created");
+      return created;
     });
   }
   private async checkSkillsExist(tx:Prisma.TransactionClient,c:OrganizationContext,ids:string[]){
@@ -212,6 +219,7 @@ export class SchedulingService {
       }
       await tx.technicianSkill.deleteMany({where:{organizationId:c.organizationId,technicianId:id}});
       if(dto.skillIds.length)await tx.technicianSkill.createMany({data:dto.skillIds.map(skillId=>({organizationId:c.organizationId,technicianId:id,skillId}))});
+      await event(tx,c.organizationId,"TechnicianProfile",id,"technician.skills.changed");
       return {technicianId:id,skillIds:dto.skillIds};
     });
   }
@@ -256,6 +264,10 @@ export class SchedulingService {
         scheduledAt:start,plannedEndAt:end,estimatedDurationMinutes:dto.estimatedDurationMinutes,
         version:{increment:1}
       }});
+      await tx.auditLog.create({data:{organizationId:c.organizationId,
+        actorId:(await tx.membership.findUniqueOrThrow({where:{organizationId_userId:{organizationId:c.organizationId,userId:c.actorId}}})).id,
+        entityType:"WorkOrder",entityId:id,action:"WORK_ORDER_SCHEDULED",
+        metadata:{plannedStartAt:start.toISOString(),plannedEndAt:end.toISOString(),estimatedDurationMinutes:dto.estimatedDurationMinutes}}});
       await event(tx,c.organizationId,"WorkOrder",id,"work-order.scheduled",updated.version);
       return updated;
     });
