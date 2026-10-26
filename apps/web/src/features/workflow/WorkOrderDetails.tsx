@@ -12,6 +12,7 @@ import {
 } from "../../services/workflow";
 import { Photo } from "./Photo";
 import { LocationSharing } from "../tracking/LocationSharing";
+import { OrderScheduleEditor } from "../scheduling/OrderScheduleEditor";
 export function WorkOrderDetails() {
   const { id = "" } = useParams();
   const org = useSession((s) => s.organizationId);
@@ -90,6 +91,10 @@ export function WorkOrderDetails() {
               {(assignment ?? order.assignments[0])?.technician.membership.user
                 .displayName ?? "Unassigned"}
             </p>
+            {order.scheduledAt && <p><strong>Planned start: </strong>{new Date(order.scheduledAt).toLocaleString()}</p>}
+            {order.plannedEndAt && <p><strong>Planned end: </strong>{new Date(order.plannedEndAt).toLocaleString()}</p>}
+            {order.estimatedDurationMinutes && <p><strong>Estimated duration: </strong>{order.estimatedDurationMinutes} minutes</p>}
+            {!!order.requiredSkills.length && <p><strong>Required skills: </strong>{order.requiredSkills.map(s=>s.skill.name).join(", ")}</p>}
             {order.completionNotes && (
               <p>
                 <strong>Completion notes: </strong>
@@ -268,6 +273,11 @@ export function WorkOrderDetails() {
                   </p>
                 )}
             </section>
+          )}
+          {staff && editable && (
+            <OrderScheduleEditor key={`${order.id}-${order.version}`} id={order.id} version={order.version}
+              scheduledAt={order.scheduledAt} plannedEndAt={order.plannedEndAt}
+              estimatedDurationMinutes={order.estimatedDurationMinutes} requiredSkills={order.requiredSkills}/>
           )}
           {assigned && accepted && order.status === "IN_PROGRESS" && (
             <LocationSharing workOrderId={order.id} />
