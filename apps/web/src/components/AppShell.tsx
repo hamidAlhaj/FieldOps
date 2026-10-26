@@ -14,6 +14,7 @@ import {
   Bell,
   BriefcaseBusiness,
   ChartNoAxesCombined,
+  CalendarClock,
   ChevronDown,
   CircleHelp,
   Compass,
@@ -76,6 +77,12 @@ function Sidebar({ close }: { close?: () => void }) {
               Analytics & reports
             </NavLink>
           )}
+        {!isDemo && ["ADMIN", "DISPATCHER", "TECHNICIAN"].includes(membership?.role.name ?? "") && (
+          <NavLink to="/scheduling" onClick={close}>
+            <CalendarClock size={19} />
+            Scheduling
+          </NavLink>
+        )}
         {!isDemo && ["ADMIN", "DISPATCHER"].includes(membership?.role.name ?? "") && (
           <NavLink to="/tracking" onClick={close}>
             <MapPin size={19} />
@@ -188,7 +195,7 @@ export function AppShell() {
             <span>Workspace</span>
             <span>/</span>
             <strong>
-              {location.pathname.startsWith("/profile") ? "Profile & settings" : location.pathname.startsWith("/administration") ? "People & teams" : location.pathname.startsWith("/tracking") ? "Live tracking" : location.pathname.startsWith("/analytics") ? "Analytics & reports" : location.pathname.startsWith("/audit-logs") ? "Audit log" : location.pathname === "/"
+              {location.pathname.startsWith("/profile") ? "Profile & settings" : location.pathname.startsWith("/administration") ? "People & teams" : location.pathname.startsWith("/scheduling") ? "Scheduling" : location.pathname.startsWith("/tracking") ? "Live tracking" : location.pathname.startsWith("/analytics") ? "Analytics & reports" : location.pathname.startsWith("/audit-logs") ? "Audit log" : location.pathname === "/"
                 ? "Overview"
                 : membership?.role.name === "CUSTOMER"
                   ? "My requests"
