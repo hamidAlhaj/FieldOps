@@ -294,11 +294,19 @@ test("customer → dispatch → technician evidence → verification and closure
       .withTags(["wcag2a", "wcag2aa"])
       .analyze();
     expect(accessibility.violations).toEqual([]);
-    expect(
-      await technician.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
+    const viewportReport = await technician.evaluate(() => ({
+      viewport: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      overflowing: Array.from(document.querySelectorAll<HTMLElement>("body *"))
+        .map((el) => ({ tag: el.tagName, cls: String(el.className).slice(0, 90),
+          right: Math.round(el.getBoundingClientRect().right),
+          width: Math.round(el.getBoundingClientRect().width) }))
+        .filter((el) => el.right > innerWidth + 1)
+        .slice(0, 12),
+    }));
+    if (viewportReport.scrollWidth > viewportReport.viewport)
+      console.error("Mobile overflow diagnostics", JSON.stringify(viewportReport));
+    expect(viewportReport.scrollWidth).toBeLessThanOrEqual(viewportReport.viewport);
     await technician.locator("#main-content").focus();
     await technician.evaluate(() => window.scrollTo(0, 0));
     await technician.screenshot({ animations: "disabled", timeout: 30000,
