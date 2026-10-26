@@ -5,12 +5,13 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaService } from "../../src/prisma/prisma.service";
 import { WorkOrderService } from "../../src/work-orders/work-order.service";
+import { SchedulingService } from "../../src/scheduling/scheduling.service";
 const { seedDatabase, id } = require("../../prisma/seed.cjs");
 
 describe("PostgreSQL tenant isolation and lifecycle", () => {
   const owner = new PrismaClient();
   const scoped = new PrismaService();
-  const work = new WorkOrderService(scoped);
+  const work = new WorkOrderService(scoped, new SchedulingService(scoped));
   const photos = new PhotoService(scoped, work);
   const a = {
     organizationId: id("damascus"),
