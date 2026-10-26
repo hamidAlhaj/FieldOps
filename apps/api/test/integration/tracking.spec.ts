@@ -361,6 +361,41 @@ describe("Tracking REST + PostgreSQL isolation and lifecycle", () => {
     await sample(s.id).expect(404);
   });
 
+  it("expires the authenticated user session and revokes location sharing", async () => {
+    const s = await start();
+    await sample(s.id).expect(201);
+    await db.authSession.update({
+      where: { id: authSessionIds.tech2 },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const row = await db.trackingSession.findUniqueOrThrow({ where: { id: s.id } });
+    expect(row.endedAt).toBeTruthy();
+    expect(row.longitude).toBeNull();
+    await sample(s.id).expect(401);
+    expect((await get("/locations", "admin").expect(200)).body.sessions
+      .some((x: {id:string}) => x.id === s.id)).toBe(false);
+  });
+
+  it("serializes a concurrent work-order revocation and GPS submission", async () => {
+    const order = await newStartedOrder();
+    const s = await start(order.id);
+    const results = await Promise.all([
+      command("patch", `/work-orders/${order.id}/status`, {
+        expectedVersion: order.version,
+        status: "CANCELLED",
+        reason: "Concurrent cancellation integration test",
+      }),
+      sample(s.id),
+    ]);
+    expect(results[0].status).toBe(200);
+    expect([201, 403, 404, 409].includes(results[1].status)).toBe(true);
+    const row = await db.trackingSession.findUniqueOrThrow({ where: { id: s.id } });
+    expect(row.endedAt).toBeTruthy();
+    expect(row.latitude).toBeNull();
+    expect(row.longitude).toBeNull();
+    await sample(s.id).expect(404);
+  });
+
   it("isolates TrackingSession at PostgreSQL RLS, not only at HTTP", async () => {
     const s = await start();
     const scoped = app.get(PrismaService);
