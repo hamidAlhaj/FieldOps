@@ -125,6 +125,11 @@ export class SchedulingService {
     const future=await tx.assignment.findMany({where:{organizationId:c.organizationId,technicianId:id,status:"ACTIVE",
       windowEndAt:{gt:now},windowStartAt:{not:null}},select:{windowStartAt:true,windowEndAt:true}});
     if(dto.status!=="AVAILABLE"&&future.length)throw new ConflictException("Active reservations prevent becoming unavailable");
+    const inProgress=await tx.assignment.count({where:{
+      organizationId:c.organizationId,technicianId:id,status:"ACTIVE",
+      workOrder:{status:"IN_PROGRESS"},
+    }});
+    if(dto.status!=="AVAILABLE"&&inProgress)throw new ConflictException("Finish the active job before going off duty");
     if(dto.status==="AVAILABLE"){
       for(const a of future){
         if(a.windowStartAt&&a.windowEndAt)
@@ -164,6 +169,10 @@ export class SchedulingService {
       const overlap=await tx.assignment.count({where:{organizationId:c.organizationId,technicianId,status:"ACTIVE",
         windowStartAt:{lt:end},windowEndAt:{gt:start}}});
       if(overlap)throw new ConflictException("Time off overlaps an assigned work order");
+      if(start<=new Date()&&end>new Date()){
+        const working=await tx.assignment.count({where:{organizationId:c.organizationId,technicianId,status:"ACTIVE",workOrder:{status:"IN_PROGRESS"}}});
+        if(working)throw new ConflictException("Cannot take time off during an active job");
+      }
       const row=await tx.technicianTimeOff.create({data:{organizationId:c.organizationId,technicianId,startAt:start,endAt:end,reason:dto.reason?.trim()}});
       await event(tx,c.organizationId,"TechnicianProfile",technicianId,"technician.time-off.changed");
       return row;
