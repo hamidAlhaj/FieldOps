@@ -316,7 +316,7 @@ model TechnicianLocationUpdate {
   accuracyMeters Float?
   recordedAt     DateTime
   createdAt      DateTime          @default(now())
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict, map: "TrackingSession_workOrder_fkey")
   technician     TechnicianProfile @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
 
   @@index([organizationId, technicianId, recordedAt(sort: Desc)])
@@ -338,9 +338,9 @@ model TrackingSession {
   recordedAt     DateTime?
   receivedAt     DateTime?
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  assignment     Assignment         @relation(fields: [organizationId, assignmentId, workOrderId, technicianId], references: [organizationId, id, workOrderId, technicianId], onDelete: Restrict, onUpdate: NoAction)
+  assignment     Assignment         @relation(fields: [organizationId, assignmentId, workOrderId, technicianId], references: [organizationId, id, workOrderId, technicianId], onDelete: Restrict, onUpdate: NoAction, map: "TrackingSession_assignment_fkey")
   workOrder      WorkOrder          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
-  technician     TechnicianProfile  @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict)
+  technician     TechnicianProfile  @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict, map: "TrackingSession_technician_fkey")
 
   @@unique([organizationId, id])
   @@index([organizationId, technicianId, endedAt])
