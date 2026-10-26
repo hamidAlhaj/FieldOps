@@ -11,6 +11,7 @@ import {
   techniciansSchema,
 } from "../../services/workflow";
 import { Photo } from "./Photo";
+import { LocationSharing } from "../tracking/LocationSharing";
 export function WorkOrderDetails() {
   const { id = "" } = useParams();
   const org = useSession((s) => s.organizationId);
@@ -267,6 +268,9 @@ export function WorkOrderDetails() {
                   </p>
                 )}
             </section>
+          )}
+          {assigned && accepted && order.status === "IN_PROGRESS" && (
+            <LocationSharing workOrderId={order.id} />
           )}
           <section className="workflow-card">
             <h2>Photo evidence</h2>
