@@ -1,12 +1,27 @@
 # FieldOps
 
-تحديث Stage4: [إدارة المؤسسة والحساب ومراجعة الواجهات الاثنتي عشرة](docs/stage4-completion.ar.md). المرحلة تبقى جزئية لاعتماد الخريطة والتوصيات على Stage6.
+نظام Field Service Dispatch & Maintenance Management مبني باستخدام React + TypeScript + Vite وNestJS وPostgreSQL وPrisma.
 
-تحديث Stage6 جزئي: أضيفت [Analytics وAudit viewer](docs/reporting.ar.md). بقية Stage6 لم تكتمل بعد، وTracking ما زال غير مفعّل.
+## الحالة الحالية — 26 أكتوبر 2026
 
-أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 5 — Core business workflow**. راجع [دورة العمل وSocket.IO والاختبارات](docs/workflow.ar.md). راجع [Component architecture والواجهة](docs/frontend.ar.md). راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
+- **Stages 1–5:** الأساس ودورة الصيانة الأساسية منفذة.
+- **Stage 6A:** Tracking Backend وخريطة React Leaflet ومشاركة موقع صريحة ومحمية منفذة على فرع التطوير.
+- **Stage 6B:** Technician Availability وSkills وTime Off والجدولة ومنع تعارض المواعيد منفذة كأساس وظيفي.
+- **المتبقي:** Smart Dispatch، استكمال Notifications وتحسينات الصور، Security Audit حديث، Docker/CI متكاملان، ثم Deployment والاختبارات النهائية.
 
-[مراجعة المشروع والمعمارية وحالة المراحل](docs/project-review.ar.md).
+راجع [تقرير حالة المراحل والبرومتات المتبقية بالعربية](docs/status/FieldOps-roadmap-progress.ar.md) قبل متابعة التنفيذ. بعض تقارير الحالة الأقدم تصف حالة ما قبل Tracking/Scheduling.
+
+**فرع التطوير الحالي:** `feature/stage-6a-tracking-backend`. هذه التغييرات لم تُدمج في `main` بعد.
+
+المراجع:
+- [Architecture وRoadmap](docs/architecture.ar.md)
+- [المصادقة والصلاحيات](docs/authentication.ar.md)
+- [تصميم قاعدة البيانات والعزل](docs/database.ar.md)
+- [معمارية الواجهة](docs/frontend.ar.md)
+- [دورة العمل وSocket.IO والاختبارات](docs/workflow.ar.md)
+- [Stage 6A — Tracking Backend](docs/tracking-backend-hardening.ar.md)
+- [Stage 6A — Tracking Frontend](docs/tracking-frontend.ar.md)
+- [Stage 6B — Availability & Scheduling](docs/scheduling-stage-6b.ar.md)
 
 ## التشغيل المحلي
 
@@ -47,4 +62,7 @@ npm exec -w @fieldops/api -- prisma migrate deploy
 
 ## نطاق التنفيذ الحالي
 
-تم تنفيذ دورة Request → Review → WorkOrder → Assignment → Accept → In Progress → Completed → Verified → Closed، مع الصور والتقدم والإلغاء وإعادة التعيين وسجل النشاط. الواجهة تتصل بـAPI افتراضياً؛ `VITE_DATA_SOURCE=demo` للمعاينة المنفصلة فقط. Socket.IO يرسل إشارات تحديث مصادقاً عليها، وREST/PostgreSQL مصدر الحقيقة. التشغيل الحالي على API instance واحدة؛ راجع [التوثيق والحدود](docs/workflow.ar.md). Live GPS وAnalytics والمرحلة التالية تتطلب طلباً جديداً.
+دورة العمل الأساسية هي Request → Review → WorkOrder → Assignment → Accept → In Progress → Completed → Verified → Closed، مع صور Before/After، التقدم والإلغاء وإعادة التعيين وسجل النشاط. REST/PostgreSQL مصدر الحقيقة، وSocket.IO يرسل إشارات تحديث مصادقاً عليها.
+
+Tracking متاح على فرع التطوير: يبدأ الفني مشاركة الموقع بموافقة صريحة أثناء عمل نشط فقط، وتعرض خريطة Leaflet المواقع الفعلية المصرح بها. Scheduling يدعم التوفر والمهارات والإجازات ونوافذ العمل ومنع التداخل. **Smart Dispatch لم يُنفّذ بعد**؛ راجع تقرير حالة المراحل والبرومتات لتفاصيل ما بقي.
+
