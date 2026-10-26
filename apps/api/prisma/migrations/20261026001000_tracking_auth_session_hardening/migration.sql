@@ -70,3 +70,26 @@ REVOKE ALL ON FUNCTION public.fieldops_tracking_auth_end() FROM PUBLIC;
 CREATE TRIGGER "TrackingSession_auth_end"
 AFTER UPDATE OF "revokedAt", "expiresAt" ON "AuthSession"
 FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_auth_end();
+
+-- Read-only visibility check, scoped to the current tenant. This deliberately
+-- does not grant the application role SELECT on AuthSession.
+CREATE FUNCTION public.fieldops_tracking_auth_is_active(tracking_id uuid)
+RETURNS boolean LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public."TrackingSession" s
+    JOIN public."AuthSession" a ON a.id = s."authSessionId"
+    JOIN public."User" u ON u.id = a."userId"
+    WHERE s.id = tracking_id
+      AND s."organizationId" =
+          nullif(current_setting('app.organization_id', true), '')::uuid
+      AND a."revokedAt" IS NULL
+      AND a."expiresAt" > clock_timestamp()
+      AND u."isActive"
+  )
+$$;
+REVOKE ALL ON FUNCTION public.fieldops_tracking_auth_is_active(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fieldops_tracking_auth_is_active(uuid)
+  TO fieldops_app;
