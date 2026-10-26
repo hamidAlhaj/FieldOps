@@ -61,6 +61,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     if(dto.consent!==true)throw new ForbiddenException("Explicit consent required");
     return this.prisma.forOrganization(c,async tx=>{
       const tech=await this.technician(tx,c);
+      await tx.$queryRaw`SELECT id FROM "TechnicianProfile" WHERE id=${tech.id}::uuid FOR UPDATE`;
       const assignment=await this.validAssignment(tx,c,tech.id,dto.workOrderId);
       const now=new Date();
       // Serialize starts and stop/reassignment against the parent assignment row.
@@ -100,10 +101,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
       // Synchronize against assignment mutations, including lifecycle updates.
       await tx.$queryRaw`SELECT id FROM "Assignment" WHERE id=${s.assignmentId}::uuid FOR UPDATE`;
       await this.validAssignment(tx,c,tech.id,s.workOrderId);
-      if(s.expiresAt<=now){
-        await tx.trackingSession.update({where:{id},data:{endedAt:now,...redacted}});
-        throw new ConflictException("Tracking session expired");
-      }
+      if(s.expiresAt<=now) throw new ConflictException("Tracking session expired");
       const recorded=new Date(dto.recordedAt);
       if(!Number.isFinite(recorded.getTime())||recorded.getTime()>now.getTime()+5000||now.getTime()-recorded.getTime()>30000)
         throw new ConflictException("Stale or future location");
