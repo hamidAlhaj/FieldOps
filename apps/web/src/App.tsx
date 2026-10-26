@@ -1,6 +1,7 @@
 import { Administration } from "./features/administration/Administration";
 import { Profile } from "./features/administration/Profile";
 import { Reports } from "./features/reporting/Reports";
+import { SchedulingPage } from "./features/scheduling/SchedulingPage";
 import { TrackingPage } from "./features/tracking/TrackingPage";
 import {
   Requests,
@@ -54,7 +55,7 @@ function Protected({
 function RouteFocus() {
   const location = useLocation();
   useEffect(() => {
-    document.title = `${location.pathname === "/login" ? "Sign in" : location.pathname === "/register" ? "Create account" : location.pathname === "/" ? "Overview" : location.pathname === "/tracking" ? "Live tracking" : "Operations"} · FieldOps`;
+    document.title = `${location.pathname === "/login" ? "Sign in" : location.pathname === "/register" ? "Create account" : location.pathname === "/" ? "Overview" : location.pathname === "/tracking" ? "Live tracking" : location.pathname === "/scheduling" ? "Scheduling" : "Operations"} · FieldOps`;
     document.getElementById("main-content")?.focus();
     window.scrollTo(0, 0);
   }, [location.pathname]);
@@ -133,6 +134,7 @@ function Application() {
           <Route path="profile" element={<Profile />} />
           <Route path="analytics" element={<Reports />} />
           <Route path="audit-logs" element={<Reports audit />} />
+          <Route path="scheduling" element={<Protected ordersOnly>{isDemo ? <Navigate to="/" replace /> : <SchedulingPage />}</Protected>} />
           <Route path="tracking" element={<Protected staffOnly><TrackingPage /></Protected>} />
           <Route
             path="work-orders"
