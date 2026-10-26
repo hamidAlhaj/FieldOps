@@ -223,6 +223,19 @@ test("customer → dispatch → technician evidence → verification and closure
     await expect(
       dispatch.getByRole("heading", { name: "Scope of work" }),
     ).toBeVisible();
+    // Stage 6B: connected scheduling UI, timezone-safe POST and role boundaries.
+    await expect(dispatch.getByRole("heading", { name: "Work order schedule" })).toBeVisible();
+    const localStart = new Date(Date.now() + 3 * 86400000);
+    const isoLocal = new Date(localStart.getTime() - localStart.getTimezoneOffset() * 60000)
+      .toISOString().slice(0, 16);
+    await dispatch.getByLabel("Planned start").fill(isoLocal);
+    await dispatch.getByRole("button", { name: "Save planned schedule" }).click();
+    await expect(dispatch.getByText("Planned end:", { exact: false }).first()).toBeVisible();
+    await expect(dispatch.getByText("Estimated duration:")).toBeVisible();
+    await technician.getByRole("link", { name: "Scheduling" }).click();
+    await expect(technician.getByRole("heading", { name: "Technician availability" })).toBeVisible();
+    await expect(technician.getByLabel("Declared availability")).toHaveValue("AVAILABLE");
+    await technician.getByRole("link", { name: "Work orders" }).click();
     await dispatch
       .getByLabel("Technician", { exact: true })
       .selectOption({ label: "Omar Field · BROWSER-001" });
