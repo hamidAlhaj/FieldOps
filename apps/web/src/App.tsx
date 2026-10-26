@@ -1,3 +1,4 @@
+import { Reports } from "./features/reporting/Reports";
 import {
   Requests,
   RequestDetails,
@@ -122,6 +123,8 @@ function Application() {
           }
         >
           <Route index element={<Overview />} />
+          <Route path="analytics" element={<Reports />} />
+          <Route path="audit-logs" element={<Reports audit />} />
           <Route
             path="work-orders"
             element={

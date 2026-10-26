@@ -1,5 +1,7 @@
 # FieldOps
 
+تحديث Stage6 جزئي: أضيفت [Analytics وAudit viewer](docs/reporting.ar.md). بقية Stage6 لم تكتمل بعد، وTracking ما زال غير مفعّل.
+
 أساس Field Service Dispatch & Maintenance Management System. التنفيذ الحالي **Stage 5 — Core business workflow**. راجع [دورة العمل وSocket.IO والاختبارات](docs/workflow.ar.md). راجع [Component architecture والواجهة](docs/frontend.ar.md). راجع [المصادقة والصلاحيات والتجربة](docs/authentication.ar.md). راجع [تصميم قاعدة البيانات والعزل والاختبارات وPrisma Studio](docs/database.ar.md). راجع [Architecture وRoadmap](docs/architecture.ar.md) لتصميم النظام وعلاقات الوحدات والقرارات.
 
 [مراجعة المشروع والمعمارية وحالة المراحل](docs/project-review.ar.md).

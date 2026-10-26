@@ -67,6 +67,19 @@ function Sidebar({ close }: { close?: () => void }) {
               Request inbox
             </NavLink>
           )}
+        {!isDemo &&
+          ["ADMIN", "DISPATCHER"].includes(membership?.role.name ?? "") && (
+            <NavLink to="/analytics" onClick={close}>
+              <ChartNoAxesCombined size={19} />
+              Analytics & reports
+            </NavLink>
+          )}
+        {!isDemo && membership?.role.name === "ADMIN" && (
+          <NavLink to="/audit-logs" onClick={close}>
+            <Activity size={19} />
+            Audit log
+          </NavLink>
+        )}
       </nav>
       <p className="nav-label future-label">COMING NEXT</p>
       <div className="future-nav" aria-label="Planned modules">
@@ -78,10 +91,7 @@ function Sidebar({ close }: { close?: () => void }) {
           <MapPin size={18} />
           Live tracking
         </span>
-        <span>
-          <ChartNoAxesCombined size={18} />
-          Analytics & reports
-        </span>
+
         <span>
           <Settings2 size={18} />
           Workspace settings

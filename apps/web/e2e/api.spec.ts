@@ -29,6 +29,25 @@ test("real registration, session restoration, error recovery and logout against 
   await expect(
     page.getByRole("heading", { name: "A fresh start" }),
   ).toBeVisible();
+  await page.goto("/analytics");
+  await expect(
+    page.getByRole("heading", { name: "Analytics & reports", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("No completions in this period.")).toBeVisible();
+  await page.screenshot({
+    path: "/tmp/fieldops-stage6-analytics.png",
+    fullPage: true,
+  });
+  await page.goto("/audit-logs");
+  await expect(
+    page.getByRole("heading", { name: "Audit log", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("No matching actions.")).toBeVisible();
+  await page.screenshot({
+    path: "/tmp/fieldops-stage6-audit.png",
+    fullPage: true,
+  });
+  await page.goto("/");
   expect(await page.evaluate(() => Object.keys(localStorage))).not.toContain(
     "accessToken",
   );
