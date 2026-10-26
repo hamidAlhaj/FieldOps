@@ -37,7 +37,7 @@ describe("Stage 6B scheduling: PostgreSQL exclusion, RLS, roles, time-off",()=>{
     const end=new Date(start.getTime()+3600000);
     return {plannedStartAt:start.toISOString(),plannedEndAt:end.toISOString(),estimatedDurationMinutes:60};
   };
-  async function schedule(orderId:string,at:ReturnType<typeof windowAt>,version=0,role="dispatcher"){
+  function schedule(orderId:string,at:ReturnType<typeof windowAt>,version=0,role="dispatcher"){
     return send("patch",`/scheduling/work-orders/${orderId}/schedule`,{expectedVersion:version,...at},role);
   }
   beforeAll(async()=>{
