@@ -1,159 +1,394 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { OrganizationContext, PrismaService } from "../prisma/prisma.service";
 import { LocationDto, StartTrackingDto } from "./tracking.dto";
+import { leaseExpiry, validateLocationTime } from "./tracking.policy";
 
-const LEASE_MS = 120_000;
-const SAMPLE_INTERVAL_MS = 15_000;
-const fresh = (now: Date) => new Date(now.getTime()+LEASE_MS);
-const redacted = { latitude:null, longitude:null, accuracyMeters:null, recordedAt:null, receivedAt:null } as const;
+export interface TrackingContext extends OrganizationContext {
+  // Derived exclusively from a verified JWT principal, never from the body.
+  authSessionId: string;
+}
+
+const erased = {
+  latitude: null,
+  longitude: null,
+  accuracyMeters: null,
+  recordedAt: null,
+  receivedAt: null,
+} as const;
+
+type SessionSummary = {
+  id: string;
+  workOrderId: string;
+  expiresAt: Date;
+  recordedAt: Date | null;
+  receivedAt: Date | null;
+};
 
 @Injectable()
 export class TrackingService implements OnModuleInit, OnModuleDestroy {
-  private timer?: NodeJS.Timeout;
-  // Only a scheduled worker uses the owner connection; no request/coordinate reads through it.
   private readonly cleanupDb = new PrismaClient();
-  private sweeping=false;
+  private timer?: NodeJS.Timeout;
+  private sweeping = false;
+
   constructor(private readonly prisma: PrismaService) {}
-  onModuleInit() {
-    this.timer=setInterval(()=>{void this.sweep();},15000);
+
+  onModuleInit(): void {
+    // The lease is enforced in every request, even when this timer is unavailable.
+    this.timer = setInterval(() => void this.sweep(), 15_000);
     this.timer.unref?.();
   }
-  private async sweep(){
-    if(this.sweeping)return;
-    this.sweeping=true;
+
+  private async sweep(): Promise<void> {
+    if (this.sweeping) return;
+    this.sweeping = true;
     try {
+      const now = new Date();
+      // Privileged background cleanup only. Never use this client in an HTTP handler.
       await this.cleanupDb.trackingSession.updateMany({
-        where:{endedAt:null,expiresAt:{lte:new Date()}},
-        data:{endedAt:new Date(),...redacted}
+        where: {
+          endedAt: null,
+          OR: [
+            { expiresAt: { lte: now } },
+            { authSessionId: null },
+            { authSession: { is: { revokedAt: { not: null } } } },
+            { authSession: { is: { expiresAt: { lte: now } } } },
+          ],
+        },
+        data: { endedAt: now, ...erased },
       });
-    }catch {
-      // Avoid sensitive record contents in operational logs.
-    }finally{this.sweeping=false;}
+    } catch {
+      // No coordinates, query arguments, or personal identifiers in logs.
+    } finally {
+      this.sweeping = false;
+    }
   }
-  async onModuleDestroy(){
-    if(this.timer)clearInterval(this.timer);
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.timer) clearInterval(this.timer);
     await this.cleanupDb.$disconnect();
   }
-  private async technician(tx:Prisma.TransactionClient,c:OrganizationContext){
-    const m=await tx.membership.findUnique({
-      where:{organizationId_userId:{organizationId:c.organizationId,userId:c.actorId}},
-      include:{role:true,technician:true,user:{select:{isActive:true}}}
+
+  private async authorize(tx: Prisma.TransactionClient, c: TrackingContext): Promise<void> {
+    // SECURITY DEFINER checks session validity without granting fieldops_app
+    // direct access to credentials. FOR SHARE serializes against logout.
+    const rows = await tx.$queryRaw<Array<{ allowed: boolean }>>`
+      SELECT public.fieldops_tracking_session_authorized(
+        ${c.authSessionId}::uuid, ${c.actorId}::uuid
+      ) AS allowed
+    `;
+    if (!rows[0]?.allowed) throw new UnauthorizedException("Authentication session expired");
+  }
+
+  private async technician(tx: Prisma.TransactionClient, c: TrackingContext) {
+    // Prevent a concurrent role/status mutation from racing with a new opt-in.
+    await tx.$queryRaw`
+      SELECT id FROM "Membership"
+      WHERE "organizationId"=${c.organizationId}::uuid
+        AND "userId"=${c.actorId}::uuid
+      FOR SHARE
+    `;
+    const member = await tx.membership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: c.organizationId,
+          userId: c.actorId,
+        },
+      },
+      include: {
+        role: true,
+        technician: true,
+        user: { select: { isActive: true } },
+      },
     });
-    if(!m || m.status!=="ACTIVE" || !m.user.isActive || m.role.name!=="TECHNICIAN" || !m.technician) throw new ForbiddenException();
-    return m.technician;
+    if (
+      !member ||
+      member.status !== "ACTIVE" ||
+      !member.user.isActive ||
+      member.role.name !== "TECHNICIAN" ||
+      !member.technician
+    ) throw new ForbiddenException("Technician membership required");
+    return member.technician;
   }
-  private async validAssignment(tx:Prisma.TransactionClient,c:OrganizationContext,technicianId:string,workOrderId:string){
-    const a=await tx.assignment.findFirst({
-      where:{
-        organizationId:c.organizationId,technicianId,workOrderId,status:"ACTIVE",
-        acceptedAt:{not:null},
-        workOrder:{status:"IN_PROGRESS"}
-      }
+
+  private async lockWorkOrder(tx: Prisma.TransactionClient, c: TrackingContext, id: string) {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "WorkOrder"
+      WHERE id=${id}::uuid AND "organizationId"=${c.organizationId}::uuid
+      FOR UPDATE
+    `;
+    if (!rows.length) throw new ForbiddenException("Work order unavailable");
+  }
+
+  private async lockAssignment(tx: Prisma.TransactionClient, id: string) {
+    await tx.$queryRaw`
+      SELECT id FROM "Assignment" WHERE id=${id}::uuid FOR UPDATE
+    `;
+  }
+
+  private async assigned(
+    tx: Prisma.TransactionClient,
+    c: TrackingContext,
+    technicianId: string,
+    workOrderId: string,
+  ) {
+    const assignment = await tx.assignment.findFirst({
+      where: {
+        organizationId: c.organizationId,
+        workOrderId,
+        technicianId,
+        status: "ACTIVE",
+        acceptedAt: { not: null },
+        workOrder: { status: "IN_PROGRESS" },
+      },
     });
-    if(!a)throw new ForbiddenException("Active, accepted and started assignment required");
-    return a;
+    if (!assignment) throw new ForbiddenException("Active started assignment required");
+    return assignment;
   }
-  private session(s:{id:string;workOrderId:string;expiresAt:Date;recordedAt:Date|null;receivedAt:Date|null}){
-    return {id:s.id,workOrderId:s.workOrderId,expiresAt:s.expiresAt.toISOString(),recordedAt:s.recordedAt?.toISOString()??null,receivedAt:s.receivedAt?.toISOString()??null};
+
+  private summary(s: SessionSummary) {
+    return {
+      id: s.id,
+      workOrderId: s.workOrderId,
+      expiresAt: s.expiresAt.toISOString(),
+      recordedAt: s.recordedAt?.toISOString() ?? null,
+      receivedAt: s.receivedAt?.toISOString() ?? null,
+    };
   }
-  async start(c:OrganizationContext,dto:StartTrackingDto){
-    if(dto.consent!==true)throw new ForbiddenException("Explicit consent required");
-    return this.prisma.forOrganization(c,async tx=>{
-      const tech=await this.technician(tx,c);
-      await tx.$queryRaw`SELECT id FROM "TechnicianProfile" WHERE id=${tech.id}::uuid FOR UPDATE`;
-      const assignment=await this.validAssignment(tx,c,tech.id,dto.workOrderId);
-      const now=new Date();
-      // Serialize starts and stop/reassignment against the parent assignment row.
-      await tx.$queryRaw`SELECT id FROM "Assignment" WHERE id=${assignment.id}::uuid FOR UPDATE`;
-      const old=await tx.trackingSession.findMany({
-        where:{organizationId:c.organizationId,technicianId:tech.id,endedAt:null}
-      });
-      for(const s of old){
-        await tx.trackingSession.update({where:{id:s.id},data:{endedAt:now,...redacted}});
-      }
-      const s=await tx.trackingSession.create({data:{
-        organizationId:c.organizationId,assignmentId:assignment.id,
-        workOrderId:assignment.workOrderId,technicianId:tech.id,
-        consentedAt:now,expiresAt:fresh(now)
-      }});
-      return this.session(s);
-    });
-  }
-  async stop(c:OrganizationContext,id:string){
-    return this.prisma.forOrganization(c,async tx=>{
-      const tech=await this.technician(tx,c);
+
+  async start(c: TrackingContext, dto: StartTrackingDto) {
+    if (dto.consent !== true) throw new ForbiddenException("Explicit consent required");
+    return this.prisma.forOrganization(c, async (tx) => {
+      await this.authorize(tx, c);
+      const tech = await this.technician(tx, c);
+      // The work order is locked first, matching WorkOrderService transitions.
+      await this.lockWorkOrder(tx, c, dto.workOrderId);
+      // Serializes concurrent Start across different assignments of this technician.
+      await tx.$queryRaw`
+        SELECT id FROM "TechnicianProfile"
+        WHERE id=${tech.id}::uuid AND "organizationId"=${c.organizationId}::uuid
+        FOR UPDATE
+      `;
+      const assignment = await this.assigned(tx, c, tech.id, dto.workOrderId);
+      await this.lockAssignment(tx, assignment.id);
+      const now = new Date();
+      // A new explicit Start supersedes prior leases; no hidden resume.
       await tx.trackingSession.updateMany({
-        where:{id,organizationId:c.organizationId,technicianId:tech.id,endedAt:null},
-        data:{endedAt:new Date(),...redacted}
+        where: { organizationId: c.organizationId, technicianId: tech.id, endedAt: null },
+        data: { endedAt: now, ...erased },
       });
-      // Idempotent for own sessions; other IDs are deliberately indistinguishable.
+      const session = await tx.trackingSession.create({
+        data: {
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          workOrderId: assignment.workOrderId,
+          assignmentId: assignment.id,
+          authSessionId: c.authSessionId,
+          consentedAt: now,
+          expiresAt: leaseExpiry(now),
+        },
+      });
+      return this.summary(session);
     });
   }
-  async sample(c:OrganizationContext,id:string,dto:LocationDto){
-    return this.prisma.forOrganization(c,async tx=>{
-      const tech=await this.technician(tx,c);
-      const now=new Date();
-      const s=await tx.trackingSession.findFirst({where:{
-        id,organizationId:c.organizationId,technicianId:tech.id,endedAt:null
-      }});
-      if(!s)throw new NotFoundException("Tracking session unavailable");
-      // Synchronize against assignment mutations, including lifecycle updates.
-      await tx.$queryRaw`SELECT id FROM "Assignment" WHERE id=${s.assignmentId}::uuid FOR UPDATE`;
-      await this.validAssignment(tx,c,tech.id,s.workOrderId);
-      if(s.expiresAt<=now) throw new ConflictException("Tracking session expired");
-      const recorded=new Date(dto.recordedAt);
-      if(!Number.isFinite(recorded.getTime())||recorded.getTime()>now.getTime()+5000||now.getTime()-recorded.getTime()>30000)
-        throw new ConflictException("Stale or future location");
-      if(s.receivedAt && now.getTime()-s.receivedAt.getTime()<SAMPLE_INTERVAL_MS)
-        throw new ConflictException("Location rate exceeded");
-      if(s.recordedAt && recorded<=s.recordedAt) throw new ConflictException("Nonmonotonic location");
-      const changed=await tx.trackingSession.updateMany({where:{
-        id,organizationId:c.organizationId,technicianId:tech.id,endedAt:null,expiresAt:{gt:now}
-      },data:{
-        latitude:dto.latitude,longitude:dto.longitude,accuracyMeters:dto.accuracyMeters,
-        recordedAt:recorded,receivedAt:now,expiresAt:fresh(now)
-      }});
-      if(!changed.count)throw new ConflictException("Tracking no longer available");
-      const updated=await tx.trackingSession.findUniqueOrThrow({where:{id}});
-      return this.session(updated);
+
+  async stop(c: TrackingContext, id: string): Promise<void> {
+    await this.prisma.forOrganization(c, async (tx) => {
+      await this.authorize(tx, c);
+      const tech = await this.technician(tx, c);
+      // Stop is idempotent. All fields are cleared atomically in one statement.
+      await tx.trackingSession.updateMany({
+        where: {
+          id,
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          endedAt: null,
+        },
+        data: { endedAt: new Date(), ...erased },
+      });
     });
   }
-  async mine(c:OrganizationContext){
-    return this.prisma.forOrganization(c,async tx=>{
-      const tech=await this.technician(tx,c);
-      const now=new Date();
-      const sessions=await tx.trackingSession.findMany({where:{
-        organizationId:c.organizationId,technicianId:tech.id,endedAt:null,expiresAt:{gt:now},
-        assignment:{status:"ACTIVE",acceptedAt:{not:null},workOrder:{status:"IN_PROGRESS"}}
-      },orderBy:{consentedAt:"desc"},take:1});
-      return {session:sessions[0]?this.session(sessions[0]):null,serverTime:now.toISOString()};
+
+  async sample(c: TrackingContext, id: string, dto: LocationDto) {
+    const result = await this.prisma.forOrganization(c, async (tx) => {
+      await this.authorize(tx, c);
+      const tech = await this.technician(tx, c);
+      const initial = await tx.trackingSession.findFirst({
+        where: {
+          id,
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          authSessionId: c.authSessionId,
+          endedAt: null,
+        },
+        select: { assignmentId: true, workOrderId: true },
+      });
+      if (!initial) throw new NotFoundException("Tracking session unavailable");
+
+      // Same lock order as assignment lifecycle: WorkOrder -> Assignment ->
+      // TrackingSession. Serializable conflicts fail closed (409 via PrismaService).
+      await this.lockWorkOrder(tx, c, initial.workOrderId);
+      await this.lockAssignment(tx, initial.assignmentId);
+      await tx.$queryRaw`SELECT id FROM "TrackingSession" WHERE id=${id}::uuid FOR UPDATE`;
+      const session = await tx.trackingSession.findFirst({
+        where: {
+          id,
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          authSessionId: c.authSessionId,
+          endedAt: null,
+        },
+      });
+      if (!session) throw new NotFoundException("Tracking session stopped");
+      const assignment = await this.assigned(tx, c, tech.id, session.workOrderId);
+      if (assignment.id !== session.assignmentId) {
+        throw new ForbiddenException("Assignment changed");
+      }
+
+      const now = new Date();
+      if (session.expiresAt <= now) {
+        await tx.trackingSession.update({
+          where: { id },
+          data: { endedAt: now, ...erased },
+        });
+        return { expired: true as const };
+      }
+      const recordedAt = validateLocationTime(
+        dto.recordedAt, now, session.recordedAt, session.receivedAt,
+      );
+      const updated = await tx.trackingSession.updateMany({
+        where: {
+          id,
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          authSessionId: c.authSessionId,
+          endedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: {
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          accuracyMeters: dto.accuracyMeters,
+          recordedAt,
+          receivedAt: now,
+          expiresAt: leaseExpiry(now),
+        },
+      });
+      if (updated.count !== 1) throw new ConflictException("Tracking lease unavailable");
+      return {
+        expired: false as const,
+        session: this.summary(
+          await tx.trackingSession.findUniqueOrThrow({ where: { id } }),
+        ),
+      };
+    });
+    // Throw only after a successful commit so expiry redaction cannot roll back.
+    if (result.expired) throw new ConflictException("Tracking session expired");
+    return result.session;
+  }
+
+  async mine(c: TrackingContext) {
+    return this.prisma.forOrganization(c, async (tx) => {
+      await this.authorize(tx, c);
+      const tech = await this.technician(tx, c);
+      const now = new Date();
+      const session = await tx.trackingSession.findFirst({
+        where: {
+          organizationId: c.organizationId,
+          technicianId: tech.id,
+          authSessionId: c.authSessionId,
+          endedAt: null,
+          expiresAt: { gt: now },
+          assignment: {
+            status: "ACTIVE",
+            acceptedAt: { not: null },
+            workOrder: { status: "IN_PROGRESS" },
+          },
+        },
+        orderBy: { consentedAt: "desc" },
+      });
+      return { session: session ? this.summary(session) : null, serverTime: now.toISOString() };
     });
   }
-  async locations(c:OrganizationContext){
-    return this.prisma.forOrganization(c,async tx=>{
-      const member=await tx.membership.findUniqueOrThrow({
-        where:{organizationId_userId:{organizationId:c.organizationId,userId:c.actorId}},
-        include:{role:true}
+
+  async locations(c: TrackingContext) {
+    return this.prisma.forOrganization(c, async (tx) => {
+      await this.authorize(tx, c);
+      const member = await tx.membership.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: c.organizationId,
+            userId: c.actorId,
+          },
+        },
+        include: { role: true, user: { select: { isActive: true } } },
       });
-      if(!["ADMIN","DISPATCHER"].includes(member.role.name))throw new ForbiddenException();
-      const now=new Date();
-      const sessions=await tx.trackingSession.findMany({
-        where:{organizationId:c.organizationId,endedAt:null,expiresAt:{gt:now},
-          assignment:{status:"ACTIVE",acceptedAt:{not:null},workOrder:{status:"IN_PROGRESS"},
-            technician:{membership:{status:"ACTIVE",role:{name:"TECHNICIAN"},user:{isActive:true}}}
-          }
-        },include:{technician:{include:{membership:{include:{user:{select:{displayName:true}}}}}},workOrder:{select:{title:true}}},
-        orderBy:{consentedAt:"desc"},take:100
+      if (
+        !member || member.status !== "ACTIVE" || !member.user.isActive ||
+        !["ADMIN", "DISPATCHER"].includes(member.role.name)
+      ) throw new ForbiddenException();
+
+      const now = new Date();
+      const sessions = await tx.trackingSession.findMany({
+        where: {
+          organizationId: c.organizationId,
+          endedAt: null,
+          expiresAt: { gt: now },
+          authSessionId: { not: null },
+          authSession: {
+            is: {
+              revokedAt: null,
+              expiresAt: { gt: now },
+              user: { isActive: true },
+            },
+          },
+          assignment: {
+            status: "ACTIVE",
+            acceptedAt: { not: null },
+            workOrder: { status: "IN_PROGRESS" },
+          },
+          technician: {
+            membership: {
+              status: "ACTIVE",
+              role: { name: "TECHNICIAN" },
+              user: { isActive: true },
+            },
+          },
+        },
+        include: {
+          technician: {
+            include: { membership: { include: { user: { select: { displayName: true } } } } },
+          },
+          workOrder: { select: { title: true } },
+        },
+        orderBy: { consentedAt: "desc" },
+        take: 100,
       });
-      return {serverTime:now.toISOString(),sessions:sessions.map(s=>({
-        id:s.id,workOrderId:s.workOrderId,technicianId:s.technicianId,
-        technicianName:s.technician.membership.user.displayName,workOrderTitle:s.workOrder.title,
-        latitude:s.latitude,longitude:s.longitude,accuracyMeters:s.accuracyMeters,
-        recordedAt:s.recordedAt?.toISOString()??null,receivedAt:s.receivedAt?.toISOString()??null,
-        expiresAt:s.expiresAt.toISOString(),
-        stale:!s.receivedAt || now.getTime()-s.receivedAt.getTime()>30000
-      }))};
+      return {
+        serverTime: now.toISOString(),
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          workOrderId: s.workOrderId,
+          technicianId: s.technicianId,
+          technicianName: s.technician.membership.user.displayName,
+          workOrderTitle: s.workOrder.title,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          accuracyMeters: s.accuracyMeters,
+          recordedAt: s.recordedAt?.toISOString() ?? null,
+          receivedAt: s.receivedAt?.toISOString() ?? null,
+          expiresAt: s.expiresAt.toISOString(),
+          stale: !s.receivedAt || now.getTime() - s.receivedAt.getTime() > 30_000,
+        })),
+      };
     });
   }
 }
