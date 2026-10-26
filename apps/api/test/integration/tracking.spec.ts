@@ -387,7 +387,17 @@ describe("Tracking REST + PostgreSQL isolation and lifecycle", () => {
       }),
       sample(s.id),
     ]);
-    expect(results[0].status).toBe(200);
+    // Serializable transactions intentionally return 409 under races. Retry
+    // the business command with its current version before asserting revocation.
+    expect([200, 409].includes(results[0].status)).toBe(true);
+    if (results[0].status === 409) {
+      const current = await db.workOrder.findUniqueOrThrow({ where: { id: order.id } });
+      await command("patch", `/work-orders/${order.id}/status`, {
+        expectedVersion: current.version,
+        status: "CANCELLED",
+        reason: "Retry cancelled concurrent work order",
+      }).expect(200);
+    }
     expect([201, 403, 404, 409].includes(results[1].status)).toBe(true);
     const row = await db.trackingSession.findUniqueOrThrow({ where: { id: s.id } });
     expect(row.endedAt).toBeTruthy();
