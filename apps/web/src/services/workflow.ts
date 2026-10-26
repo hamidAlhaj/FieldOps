@@ -18,6 +18,10 @@ export const requestSchema = recordSchema.extend({
 export const orderSchema = recordSchema.extend({
   progress: z.number(),
   completionNotes: z.string().nullable(),
+  scheduledAt: z.string().nullable(),
+  plannedEndAt: z.string().nullable(),
+  estimatedDurationMinutes: z.number().nullable(),
+  requiredSkills: z.array(z.object({skillId:z.string().uuid(),skill:z.object({id:z.string().uuid(),name:z.string()})})),
   request: z.object({ id: z.string(), address: z.string() }),
   assignments: z.array(
     z.object({
