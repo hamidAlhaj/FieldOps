@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:api": "FIELDOPS_E2E_API=true playwright test"
+    "test:e2e:api": "node scripts/run-playwright-api.cjs"
   },
   "dependencies": {
     "@fieldops/contracts": "*",
