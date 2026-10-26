@@ -2291,3 +2291,11 @@ input[aria-invalid="true"] {
   .tracking-person-heading > div { flex-basis:50%; }
   .tracking-status time { margin-left:0; width:100%; }
 }
+
+
+/* Keep location consent controls within narrow work-order columns. */
+.workflow-columns > div, .workflow-columns > aside { min-width: 0; }
+.location-sharing { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.location-sharing > * { min-width: 0; max-width: 100%; }
+.location-sharing .sharing-heading { flex-wrap: wrap; }
+.location-sharing .button { max-width: 100%; white-space: normal; text-align: center; }
