@@ -249,6 +249,7 @@ test("customer → dispatch → technician evidence → verification and closure
     // No location request is permitted before the technician explicitly opts in.
     await expect(technician.getByRole("heading", { name: "Location sharing" })).toBeVisible();
     await expect(technician.getByRole("button", { name: "Start sharing location" })).toBeDisabled();
+    const dispatcherWorkOrderUrl = dispatch.url();
     await dispatch.getByRole("link", { name: "Live tracking" }).click();
     await expect(dispatch.getByRole("heading", { name: "Live tracking" })).toBeVisible();
     await expect(dispatch.getByText("No technician has an active sharing session.")).toBeVisible();
@@ -264,8 +265,12 @@ test("customer → dispatch → technician evidence → verification and closure
     await expect(technician.getByText("Sharing off", { exact: true })).toBeVisible();
     await expect(dispatch.getByText("No technician has an active sharing session."))
       .toBeVisible({ timeout: 35_000 });
+    const customerRequestUrl = customer.url();
     await customer.goto("/tracking");
     await expect(customer).toHaveURL("/");
+    await customer.goto(customerRequestUrl);
+    await dispatch.goto(dispatcherWorkOrderUrl);
+    await expect(dispatch.getByRole("heading", { name: "Scope of work" })).toBeVisible();
 
     await technician
       .getByLabel("Work notes / reason")
