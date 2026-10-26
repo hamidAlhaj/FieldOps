@@ -55,7 +55,7 @@ CREATE TRIGGER "TrackingSession_assignment_end" AFTER UPDATE OF status ON "Assig
 
 CREATE FUNCTION public.fieldops_tracking_membership_end() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 BEGIN
-  IF NEW.status<>'ACTIVE' THEN
+  IF NEW.status<>'ACTIVE' OR NEW."roleId" IS DISTINCT FROM OLD."roleId" THEN
     UPDATE public."TrackingSession" s SET "endedAt"=COALESCE(s."endedAt",CURRENT_TIMESTAMP),
       latitude=NULL,longitude=NULL,"accuracyMeters"=NULL,"recordedAt"=NULL,"receivedAt"=NULL
     FROM public."TechnicianProfile" t WHERE t."organizationId"=s."organizationId" AND t.id=s."technicianId"
@@ -64,4 +64,18 @@ BEGIN
   RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION public.fieldops_tracking_membership_end() FROM PUBLIC;
-CREATE TRIGGER "TrackingSession_membership_end" AFTER UPDATE OF status ON "Membership" FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_membership_end();
+CREATE TRIGGER "TrackingSession_membership_end" AFTER UPDATE OF status, "roleId" ON "Membership" FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_membership_end();
+
+CREATE FUNCTION public.fieldops_tracking_user_end() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+  IF NOT NEW."isActive" THEN
+    UPDATE public."TrackingSession" s SET "endedAt"=COALESCE(s."endedAt",CURRENT_TIMESTAMP),
+      latitude=NULL,longitude=NULL,"accuracyMeters"=NULL,"recordedAt"=NULL,"receivedAt"=NULL
+    FROM public."TechnicianProfile" t JOIN public."Membership" m ON m.id=t."membershipId"
+    WHERE t."organizationId"=s."organizationId" AND t.id=s."technicianId"
+      AND m."userId"=NEW.id AND s."endedAt" IS NULL;
+  END IF;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.fieldops_tracking_user_end() FROM PUBLIC;
+CREATE TRIGGER "TrackingSession_user_end" AFTER UPDATE OF "isActive" ON "User" FOR EACH ROW EXECUTE FUNCTION public.fieldops_tracking_user_end();
