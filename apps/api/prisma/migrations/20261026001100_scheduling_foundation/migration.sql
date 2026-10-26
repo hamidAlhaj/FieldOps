@@ -10,17 +10,6 @@ ALTER TABLE "Assignment" ADD COLUMN "windowStartAt" TIMESTAMP(3), ADD COLUMN "wi
 ALTER TABLE "WorkOrder" ADD CONSTRAINT "WorkOrder_schedule_consistent"
   CHECK (
     ("scheduledAt" IS NULL AND "plannedEndAt" IS NULL AND "estimatedDurationMinutes" IS NULL)
-    OR ("scheduledAt" IS NOT NULL AND "plannedEndAt" IS NOT NULL
-        AND "plannedEndAt" > "scheduledAt"
-        AND "estimatedDurationMinutes" BETWEEN 15 AND 720
-        AND "plannedEndAt" = "scheduledAt" + ("estimatedDurationMinutes" * interval '1 minute'))
-  );
--- Already scheduled legacy orders have only scheduledAt. Keep them valid, but
--- new/edited schedules must have complete endpoints and duration.
-ALTER TABLE "WorkOrder" DROP CONSTRAINT "WorkOrder_schedule_consistent";
-ALTER TABLE "WorkOrder" ADD CONSTRAINT "WorkOrder_schedule_consistent"
-  CHECK (
-    ("scheduledAt" IS NULL AND "plannedEndAt" IS NULL AND "estimatedDurationMinutes" IS NULL)
     OR ("scheduledAt" IS NOT NULL AND "plannedEndAt" IS NULL AND "estimatedDurationMinutes" IS NULL)
     OR ("scheduledAt" IS NOT NULL AND "plannedEndAt" > "scheduledAt"
         AND "estimatedDurationMinutes" BETWEEN 15 AND 720
