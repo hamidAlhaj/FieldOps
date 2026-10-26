@@ -193,6 +193,7 @@ describe("Tracking REST + PostgreSQL isolation and lifecycle", () => {
     expect(JSON.stringify(mine.body)).not.toContain("35.111111");
     await get("/locations", "tech1").expect(403);
     await get("/locations", "customer").expect(403);
+    await get("/locations", "admin").expect(200);
     const staff = await get("/locations", "dispatcher").expect(200);
     expect(staff.headers["cache-control"]).toContain("no-store");
     const visible = staff.body.sessions.find((row: {id:string}) => row.id === s.id);
@@ -233,7 +234,10 @@ describe("Tracking REST + PostgreSQL isolation and lifecycle", () => {
     const s = await start();
     await sample(s.id).expect(201);
     await db.trackingSession.update({
-      where: { id: s.id }, data: { expiresAt: new Date(Date.now() - 1000) },
+      where: { id: s.id }, data: {
+        consentedAt: new Date(Date.now() - 130_000),
+        expiresAt: new Date(Date.now() - 1000),
+      },
     });
     await get("/mine", "tech2").expect(200).then((r) => expect(r.body.session).toBeNull());
     expect((await get("/locations", "dispatcher").expect(200)).body.sessions
