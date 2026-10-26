@@ -14,9 +14,9 @@ const env = {
 };
 const cwd = resolve(__dirname, "../../..");
 const migration = spawnSync(
-  "npm",
+  process.platform === "win32" ? "npm.cmd" : "npm",
   ["exec", "-w", "@fieldops/api", "--", "prisma", "migrate", "deploy"],
-  { cwd, env, stdio: "inherit" },
+  { cwd, env, stdio: "inherit", shell: process.platform === "win32" },
 );
 if (migration.status !== 0) process.exit(migration.status ?? 1);
 const child = spawn("node", ["dist/main.js"], {
