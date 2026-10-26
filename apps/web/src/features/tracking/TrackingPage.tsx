@@ -80,8 +80,8 @@ export function TrackingPage() {
           <><WifiOff size={16} aria-hidden="true" /> Offline — locations hidden until connection returns.</>
         ) : tracking.isError ? (
           <><AlertTriangle size={16} aria-hidden="true" /> Could not verify live locations. No cached coordinates are being shown.</>
-        ) : tracking.isPending ? (
-          "Loading authorized tracking data…"
+        ) : tracking.isPending || tracking.awaitingVerification ? (
+          "Verifying authorized tracking data…"
         ) : connected ? (
           "Realtime notifications connected · GPS verified by authenticated API every 15 seconds."
         ) : (
@@ -102,7 +102,7 @@ export function TrackingPage() {
         </div>
       )}
 
-      {tracking.isPending ? (
+      {tracking.isPending || tracking.awaitingVerification ? (
         <section className="workflow-card" role="status">Loading map and active sessions…</section>
       ) : !tracking.online || tracking.isError ? null : (
         <div className="tracking-layout">
