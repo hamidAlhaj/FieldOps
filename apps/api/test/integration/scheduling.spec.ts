@@ -123,6 +123,30 @@ describe("Stage 6B scheduling: PostgreSQL exclusion, RLS, roles, time-off",()=>{
       assignedById:id("damascus:dispatcher"),status:"ACTIVE"
     }})).rejects.toThrow();
   });
+  it("cancelling a scheduled order releases reservation but preserves its assignment history",async()=>{
+    const first=await makeOrder(),second=await makeOrder(),slot=windowAt(144);
+    await schedule(first,slot).expect(200);await schedule(second,slot).expect(200);
+    await send("post",`/work-orders/${first}/assignments`,{expectedVersion:1,technicianId:tech2}).expect(201);
+    await send("post",`/work-orders/${second}/assignments`,{expectedVersion:1,technicianId:tech2}).expect(409);
+    await send("patch",`/work-orders/${first}/status`,{
+      expectedVersion:2,status:"CANCELLED",reason:"Reschedule required"
+    }).expect(200);
+    await send("post",`/work-orders/${second}/assignments`,{expectedVersion:1,technicianId:tech2}).expect(201);
+    const retained=await db.assignment.findFirstOrThrow({where:{workOrderId:first}});
+    expect(retained.status).toBe("CANCELLED");
+    expect(retained.windowStartAt?.toISOString()).toBe(slot.plannedStartAt);
+  });
+  it("cannot reschedule an active assignment into a conflicting technician slot",async()=>{
+    const first=await makeOrder(),second=await makeOrder();
+    const one=windowAt(168),two=windowAt(170);
+    await schedule(first,one).expect(200);await schedule(second,two).expect(200);
+    await send("post",`/work-orders/${first}/assignments`,{expectedVersion:1,technicianId:tech2}).expect(201);
+    await send("post",`/work-orders/${second}/assignments`,{expectedVersion:1,technicianId:tech2}).expect(201);
+    await schedule(second,one,2).expect(409);
+    const preserved=await db.workOrder.findUniqueOrThrow({where:{id:second}});
+    expect(preserved.scheduledAt?.toISOString()).toBe(two.plannedStartAt);
+  });
+
   it("conflicting concurrent requests cannot both reserve same technician",async()=>{
     const first=await makeOrder(),second=await makeOrder(),slot=windowAt(120);
     await schedule(first,slot).expect(200);await schedule(second,slot).expect(200);
