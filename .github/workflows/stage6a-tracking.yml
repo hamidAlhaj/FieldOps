@@ -55,3 +55,7 @@ jobs:
         run: npm test
       - name: PostgreSQL-backed integration tests
         run: npm run test:integration -w @fieldops/api
+      - name: Install Chromium for real browser integration
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Playwright connected-browser integration
+        run: npm run test:e2e:api -w @fieldops/web
