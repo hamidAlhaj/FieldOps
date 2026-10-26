@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 test("real registration, session restoration, error recovery and logout against NestJS/PostgreSQL", async ({
@@ -39,7 +41,7 @@ test("real registration, session restoration, error recovery and logout against 
     "Browser operations team",
   );
   await page.screenshot({ animations: "disabled", timeout: 30000,
-    path: "/tmp/fieldops-stage4-administration.png",
+    path: join(tmpdir(), "fieldops-stage4-administration.png"),
     fullPage: true,
   });
   await page.goto("/profile");
@@ -54,7 +56,7 @@ test("real registration, session restoration, error recovery and logout against 
     "Updated Browser Manager",
   );
   await page.screenshot({ animations: "disabled", timeout: 30000,
-    path: "/tmp/fieldops-stage4-profile.png",
+    path: join(tmpdir(), "fieldops-stage4-profile.png"),
     fullPage: true,
   });
   await page.goto("/analytics");
@@ -63,7 +65,7 @@ test("real registration, session restoration, error recovery and logout against 
   ).toBeVisible();
   await expect(page.getByText("No completions in this period.")).toBeVisible();
   await page.screenshot({ animations: "disabled", timeout: 30000,
-    path: "/tmp/fieldops-stage6-analytics.png",
+    path: join(tmpdir(), "fieldops-stage6-analytics.png"),
     fullPage: true,
   });
   await page.goto("/audit-logs");
@@ -72,7 +74,7 @@ test("real registration, session restoration, error recovery and logout against 
   ).toBeVisible();
   await expect(page.getByText("No matching actions.")).toBeVisible();
   await page.screenshot({ animations: "disabled", timeout: 30000,
-    path: "/tmp/fieldops-stage6-audit.png",
+    path: join(tmpdir(), "fieldops-stage6-audit.png"),
     fullPage: true,
   });
   await page.goto("/");
@@ -310,7 +312,7 @@ test("customer → dispatch → technician evidence → verification and closure
     await technician.locator("#main-content").focus();
     await technician.evaluate(() => window.scrollTo(0, 0));
     await technician.screenshot({ animations: "disabled", timeout: 30000,
-      path: "/tmp/fieldops-stage5-technician.png",
+      path: join(tmpdir(), "fieldops-stage5-technician.png"),
       fullPage: true,
     });
     await technician
@@ -328,7 +330,7 @@ test("customer → dispatch → technician evidence → verification and closure
     await dispatch.locator("#main-content").focus();
     await dispatch.evaluate(() => window.scrollTo(0, 0));
     await dispatch.screenshot({ animations: "disabled", timeout: 30000,
-      path: "/tmp/fieldops-stage5-dispatch.png",
+      path: join(tmpdir(), "fieldops-stage5-dispatch.png"),
       fullPage: true,
     });
     await technician
