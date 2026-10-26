@@ -167,6 +167,8 @@ test("customer → dispatch → technician evidence → verification and closure
   const dispatchContext = await browser.newContext();
   const technicianContext = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    permissions: ["geolocation"],
+    geolocation: { latitude: 35.111111, longitude: 36.222222, accuracy: 14 },
   });
   try {
     const customer = await customerContext.newPage();
@@ -243,6 +245,28 @@ test("customer → dispatch → technician evidence → verification and closure
       technician.getByRole("img", { name: "before maintenance evidence" }),
     ).toBeVisible();
     await technician.getByRole("button", { name: "Start work" }).click();
+    // Stage 6A: real NestJS/PostgreSQL tracking with browser GPS permission.
+    // No location request is permitted before the technician explicitly opts in.
+    await expect(technician.getByRole("heading", { name: "Location sharing" })).toBeVisible();
+    await expect(technician.getByRole("button", { name: "Start sharing location" })).toBeDisabled();
+    await dispatch.getByRole("link", { name: "Live tracking" }).click();
+    await expect(dispatch.getByRole("heading", { name: "Live tracking" })).toBeVisible();
+    await expect(dispatch.getByText("No technician has an active sharing session.")).toBeVisible();
+    await technician.getByLabel("I agree to share my location during this work session").check();
+    await technician.getByRole("button", { name: "Start sharing location" }).click();
+    await expect(technician.getByText("Location sharing is on.")).toBeVisible({ timeout: 30_000 });
+    await expect(dispatch.getByText("Omar Field", { exact: true })).toBeVisible({ timeout: 35_000 });
+    await expect(dispatch.getByText("Recent", { exact: true })).toBeVisible({ timeout: 35_000 });
+    await expect(dispatch.getByText("±14 m", { exact: true })).toBeVisible();
+
+    // Server-side STOP removes the marker and last-known GPS fix.
+    await technician.getByRole("button", { name: "Stop sharing location" }).click();
+    await expect(technician.getByText("Sharing off", { exact: true })).toBeVisible();
+    await expect(dispatch.getByText("No technician has an active sharing session."))
+      .toBeVisible({ timeout: 35_000 });
+    await customer.goto("/tracking");
+    await expect(customer).toHaveURL("/");
+
     await technician
       .getByLabel("Work notes / reason")
       .fill("Mounts replaced; completing final checks.");
