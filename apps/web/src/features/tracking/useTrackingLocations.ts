@@ -44,20 +44,25 @@ export function useTrackingLocations(enabled: boolean) {
   const userId = useSession((s) => s.user?.id);
   const queryClient = useQueryClient();
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [verifiedSince, setVerifiedSince] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const changed = () => {
       setOnline(navigator.onLine);
+      setVerifiedSince(Date.now()); // Hide cached GPS until a fresh authenticated request succeeds.
       if (navigator.onLine) void queryClient.invalidateQueries({ queryKey: ["tracking-locations", org, userId] });
     };
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     window.addEventListener("online", changed);
     window.addEventListener("offline", changed);
+    const visible = () => { if (document.visibilityState === "visible") changed(); };
+    document.addEventListener("visibilitychange", visible);
     return () => {
       clearInterval(tick);
       window.removeEventListener("online", changed);
       window.removeEventListener("offline", changed);
+      document.removeEventListener("visibilitychange", visible);
     };
   }, [org, queryClient, userId]);
 
@@ -74,6 +79,7 @@ export function useTrackingLocations(enabled: boolean) {
     // On revocation, do not show sensitive previously cached positions.
     placeholderData: undefined,
   });
-  const sessions = online && query.isSuccess ? query.data.sessions : [];
-  return { ...query, sessions, online, now };
+  const awaitingVerification = online && query.dataUpdatedAt < verifiedSince;
+  const sessions = online && query.isSuccess && !awaitingVerification ? query.data.sessions : [];
+  return { ...query, sessions, online, now, awaitingVerification };
 }
