@@ -235,7 +235,7 @@ test("customer → dispatch → technician evidence → verification and closure
     await technician.getByRole("link", { name: "Scheduling" }).click();
     await expect(technician.getByRole("heading", { name: "Technician availability" })).toBeVisible();
     await expect(technician.getByLabel("Declared availability")).toHaveValue("AVAILABLE");
-    await technician.getByRole("link", { name: "Work orders" }).click();
+    await technician.goto("/");
     await dispatch
       .getByLabel("Technician", { exact: true })
       .selectOption({ label: "Omar Field · BROWSER-001" });
