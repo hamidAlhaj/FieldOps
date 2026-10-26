@@ -90,12 +90,12 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
 
   private async technician(tx: Prisma.TransactionClient, c: TrackingContext) {
     // Prevent a concurrent role/status mutation from racing with a new opt-in.
-    await tx.$queryRaw`
-      SELECT id FROM "Membership"
-      WHERE "organizationId"=${c.organizationId}::uuid
-        AND "userId"=${c.actorId}::uuid
-      FOR SHARE
+    const rows = await tx.$queryRaw<Array<{ locked: boolean }>>`
+      SELECT public.fieldops_tracking_membership_lock(
+        ${c.organizationId}::uuid, ${c.actorId}::uuid
+      ) AS locked
     `;
+    if (!rows[0]?.locked) throw new ForbiddenException("Technician membership required");
     const member = await tx.membership.findUnique({
       where: {
         organizationId_userId: {
