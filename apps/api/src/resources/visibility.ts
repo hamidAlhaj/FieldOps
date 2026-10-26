@@ -26,6 +26,7 @@ export const orderDetail = {
     include: { technician: { include: { membership: person } } },
   },
   attachments: { orderBy: { createdAt: "asc" as const } },
+  requiredSkills: { include: { skill: { select: { id: true, name: true } } } },
   progressUpdates: {
     orderBy: { createdAt: "asc" as const },
     include: { author: person },
