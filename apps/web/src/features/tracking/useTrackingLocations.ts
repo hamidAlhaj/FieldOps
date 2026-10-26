@@ -23,14 +23,14 @@ export function hasReportedPosition(
 export function isStaleLocation(
   item: Pick<TrackedLocation, "stale" | "receivedAt" | "expiresAt">,
   serverTime: string,
-  now: number,
+  elapsedMs: number,
 ): boolean {
   // The server already marks stale fixes. Compare against the returned server
   // clock to tolerate a skewed device clock and the passage of time afterward.
   const serverAt = Date.parse(serverTime);
   const received = item.receivedAt ? Date.parse(item.receivedAt) : NaN;
   const expires = Date.parse(item.expiresAt);
-  const elapsed = Number.isFinite(serverAt) ? Math.max(0, now - serverAt) : 0;
+  const elapsed = Math.max(0, elapsedMs);
   return (
     item.stale ||
     !Number.isFinite(received) ||
