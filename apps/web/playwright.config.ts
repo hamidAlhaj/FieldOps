@@ -25,13 +25,13 @@ export default defineConfig({
         },
         {
           command:
-            "VITE_DATA_SOURCE=api FIELDOPS_API_PROXY=http://127.0.0.1:3001 npm run dev -- --port 5175",
+            "node scripts/e2e-vite-server.cjs api",
           url: "http://127.0.0.1:5175",
           timeout: 30000,
         },
       ]
     : {
-        command: "VITE_DATA_SOURCE=demo npm run dev -- --port 5174",
+        command: "node scripts/e2e-vite-server.cjs demo",
         url: "http://127.0.0.1:5174",
         reuseExistingServer: !process.env.CI,
       },
