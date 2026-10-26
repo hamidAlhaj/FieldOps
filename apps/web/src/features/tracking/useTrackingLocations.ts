@@ -70,6 +70,7 @@ export function useTrackingLocations(enabled: boolean) {
     refetchOnReconnect: true,
     retry: false,
     staleTime: 0,
+    gcTime: 0, // Purge sensitive coordinates as soon as the page unmounts.
     // On revocation, do not show sensitive previously cached positions.
     placeholderData: undefined,
   });
