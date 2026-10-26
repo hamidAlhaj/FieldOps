@@ -122,12 +122,12 @@ export function SchedulingPage(){
   const [selected,setSelected]=useState("");
   const api=schedulingApi(org);
   const q=useQuery({queryKey:["scheduling",org,staff?"all":"mine"],
-    queryFn:({signal})=>staff?api.technicians(signal):api.mine(signal),
+    queryFn:async({signal}):Promise<TechnicianSchedule[]>=>staff?api.technicians(signal):[await api.mine(signal)],
     enabled:!isDemo&&(staff||tech)&&!!org});
   if(isDemo||(!staff&&!tech))return <section className="workflow-card">Scheduling is available only to authorized staff.</section>;
   if(q.isPending)return <p role="status">Loading scheduling information…</p>;
   if(q.isError)return <ErrorState retry={()=>void q.refetch()}/>;
-  const records=Array.isArray(q.data)?q.data:[q.data];
+  const records=q.data;
   const item=records.find(t=>t.id===selected)??records[0];
   const editable=tech||role==="ADMIN";
   return <div className="workflow-page schedule-page">
