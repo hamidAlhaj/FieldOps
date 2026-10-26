@@ -339,7 +339,7 @@ model TrackingSession {
   receivedAt     DateTime?
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   assignment     Assignment         @relation(fields: [organizationId, assignmentId, workOrderId, technicianId], references: [organizationId, id, workOrderId, technicianId], onDelete: Restrict, onUpdate: NoAction, map: "TrackingSession_assignment_fkey")
-  workOrder      WorkOrder          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict)
+  workOrder      WorkOrder          @relation(fields: [organizationId, workOrderId], references: [organizationId, id], onDelete: Restrict, map: "TrackingSession_workOrder_fkey")
   technician     TechnicianProfile  @relation(fields: [organizationId, technicianId], references: [organizationId, id], onDelete: Restrict, map: "TrackingSession_technician_fkey")
 
   @@unique([organizationId, id])
