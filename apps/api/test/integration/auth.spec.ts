@@ -64,6 +64,45 @@ describe("Authentication and resource authorization HTTP/PostgreSQL", () => {
     if (app) await app.close();
     await db.$disconnect();
   });
+  it("reports real tenant metrics and restricts audit access and pagination", async () => {
+    const from = new Date("2026-01-01T00:00:00Z");
+    const to = new Date("2027-01-01T00:00:00Z");
+    const range = `from=${from.toISOString()}&to=${to.toISOString()}`;
+    const metrics = await get(`analytics?${range}`, "dispatcher").expect(200);
+    const count = await db.workOrder.count({
+      where: { organizationId: org, completedAt: { gte: from, lt: to } },
+    });
+    expect(metrics.body.completed).toBe(count);
+    expect(
+      metrics.body.workload.every(
+        (t: { name: string }) => typeof t.name === "string",
+      ),
+    ).toBe(true);
+    await get("analytics", "customer").expect(403);
+    await get("analytics", "tech1").expect(403);
+    await get("analytics?from=bad", "admin").expect(400);
+    await request(app.getHttpServer())
+      .get(path("analytics", other))
+      .auth(tokens.admin, { type: "bearer" })
+      .expect(403);
+    await get("audit-logs", "dispatcher").expect(403);
+    const logs = await get(`audit-logs?${range}&pageSize=1`, "admin").expect(
+      200,
+    );
+    expect(logs.body.items.length).toBeLessThanOrEqual(1);
+    expect(logs.body.total).toBe(
+      await db.auditLog.count({
+        where: { organizationId: org, createdAt: { gte: from, lt: to } },
+      }),
+    );
+    expect(logs.body.items[0]).not.toHaveProperty("metadata");
+    await get("audit-logs?page=0", "admin").expect(400);
+    const filtered = await get(
+      `audit-logs?${range}&resourceId=${id("aleppo:open:order")}`,
+      "admin",
+    ).expect(200);
+    expect(filtered.body.total).toBe(0);
+  });
   it("registers with Argon2id, private cookie and no hash/token disclosure", async () => {
     const r = await request(app.getHttpServer())
       .post("/api/v1/auth/register")

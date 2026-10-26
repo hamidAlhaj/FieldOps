@@ -1,3 +1,4 @@
+import { ReportingModule } from "./reporting/reporting.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { AuthModule } from "./auth/auth.module";
 import { ResourceModule } from "./resources/resource.module";
@@ -7,6 +8,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { HealthController } from "./health/health.controller";
 @Module({
   imports: [
+    ReportingModule,
     PrismaModule,
     AuthModule,
     WorkOrderModule,
