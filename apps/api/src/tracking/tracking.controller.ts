@@ -13,7 +13,6 @@ import { TrackingService } from "./tracking.service";
 @ApiTags("Tracking")
 @ApiBearerAuth()
 @UseGuards(OriginGuard)
-@Header("Cache-Control", "private, no-store")
 @Controller("organizations/:organizationId/tracking")
 export class TrackingController {
   constructor(private readonly service: TrackingService) {}
@@ -26,6 +25,7 @@ export class TrackingController {
     };
   }
 
+  @Header("Cache-Control", "private, no-store")
   @Post("sessions")
   @Roles("TECHNICIAN")
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -33,6 +33,7 @@ export class TrackingController {
     return this.service.start(this.context(r), dto);
   }
 
+  @Header("Cache-Control", "private, no-store")
   @Delete("sessions/:id")
   @HttpCode(204)
   @Roles("TECHNICIAN")
@@ -40,6 +41,7 @@ export class TrackingController {
     return this.service.stop(this.context(r), id);
   }
 
+  @Header("Cache-Control", "private, no-store")
   @Post("sessions/:id/location")
   @Roles("TECHNICIAN")
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
@@ -51,12 +53,14 @@ export class TrackingController {
     return this.service.sample(this.context(r), id, dto);
   }
 
+  @Header("Cache-Control", "private, no-store")
   @Get("mine")
   @Roles("TECHNICIAN")
   mine(@Req() r: AuthRequest) {
     return this.service.mine(this.context(r));
   }
 
+  @Header("Cache-Control", "private, no-store")
   @Get("locations")
   @Roles("ADMIN", "DISPATCHER")
   locations(@Req() r: AuthRequest) {
